@@ -1,4 +1,5 @@
 import type { BaseBladeParams } from '@tweakpane/core';
+import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
 
 export interface ProfilerBladePluginParams extends BaseBladeParams {
   view: 'profiler';
@@ -7,4 +8,5 @@ export interface ProfilerBladePluginParams extends BaseBladeParams {
   fractionDigits?: number;
   label?: string;
   interval?: number;
+  measureHandler?: ProfilerBladeMeasureHandler;
 }

@@ -1,11 +1,13 @@
-import { LabelController, ParamsParsers, ValueMap, parseParams } from '@tweakpane/core';
+import { LabelController, ParamsParser, ParamsParsers, ValueMap, parseParams } from '@tweakpane/core';
 import { ProfilerBladeApi } from './ProfilerBladeApi';
 import { ProfilerBladeController } from './ProfilerBladeController';
+import { ProfilerBladeDefaultMeasureHandler } from './ProfilerBladeDefaultMeasureHandler';
 import { createTicker } from './utils/createTicker';
 import type {
   BladePlugin,
   LabelPropsObject,
 } from '@tweakpane/core';
+import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
 import type { ProfilerBladePluginParams } from './ProfilerBladePluginParams';
 
 export const ProfilerBladePlugin: BladePlugin<
@@ -25,6 +27,7 @@ ProfilerBladePluginParams
       fractionDigits: p.optional.number,
       label: p.optional.string,
       interval: p.optional.number,
+      measureHandler: p.optional.raw as ParamsParser<ProfilerBladeMeasureHandler>,
     } );
 
     return result ? { params: result } : null;
@@ -35,6 +38,7 @@ ProfilerBladePluginParams
     const targetLength = args.params.targetLength ?? 16.67;
     const unitString = args.params.unitString ?? 'ms';
     const fractionDigits = args.params.fractionDigits ?? 2;
+    const measureHandler = args.params.measureHandler ?? new ProfilerBladeDefaultMeasureHandler();
 
     return new LabelController( args.document, {
       blade: args.blade,
@@ -47,6 +51,7 @@ ProfilerBladePluginParams
         unitString,
         fractionDigits,
         viewProps: args.viewProps,
+        measureHandler,
       } ),
     } );
   },

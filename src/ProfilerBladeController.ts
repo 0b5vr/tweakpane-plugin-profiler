@@ -3,7 +3,6 @@ import {
   Ticker,
   ViewProps,
 } from '@tweakpane/core';
-import { ProfilerBladeDefaultMeasureHandler } from './ProfilerBladeDefaultMeasureHandler';
 import { ProfilerBladeView } from './ProfilerBladeView';
 import type { ProfilerBladeControllerConfig } from './ProfilerBladeControllerConfig';
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
@@ -41,7 +40,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       this.ticker_.dispose();
     } );
 
-    this.measureHandler = new ProfilerBladeDefaultMeasureHandler();
+    this.measureHandler = config.measureHandler;
 
     this.entryStack_ = [];
     this.lastRootEntry_ = {
