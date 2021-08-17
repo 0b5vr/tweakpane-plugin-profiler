@@ -52,33 +52,11 @@ function getPlugins(css, shouldMinify) {
 	];
 }
 
-function getDistName(packageName) {
-	// `@tweakpane/plugin-foobar` -> `tweakpane-plugin-foobar`
-	// `tweakpane-plugin-foobar`  -> `tweakpane-plugin-foobar`
-	return packageName
-		.split(/[@/-]/)
-		.reduce((comps, comp) => (comp !== '' ? [...comps, comp] : comps), [])
-		.join('-');
-}
-
-function getUmdName(packageName) {
-	// `@tweakpane/plugin-foobar` -> `TweakpaneFoobarPlugin`
-	// `tweakpane-plugin-foobar`  -> `TweakpaneFoobarPlugin`
-	return (
-		packageName
-			.split(/[@/-]/)
-			.map((comp) =>
-				comp !== 'plugin' ? comp.charAt(0).toUpperCase() + comp.slice(1) : '',
-			)
-			.join('') + 'Plugin'
-	);
-}
-
 export default async () => {
 	const production = process.env.BUILD === 'production';
 	const postfix = production ? '.min' : '';
 
-	const distName = getDistName(Package.name);
+	const distName = 'tweakpane-plugin-profiler';
 	const css = await compileCss();
 	return {
 		input: 'src/index.ts',
@@ -89,7 +67,7 @@ export default async () => {
 			globals: {
 				tweakpane: 'Tweakpane',
 			},
-			name: getUmdName(Package.name),
+			name: 'TweakpaneProfilerBladePlugin',
 		},
 		plugins: getPlugins(css, production),
 

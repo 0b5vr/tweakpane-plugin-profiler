@@ -1,9 +1,9 @@
 {
-  "name": "tweakpane-plugin-template",
+  "name": "@0b5vr/tweakpane-plugin-profiler",
   "version": "0.0.0",
-  "description": "Plugin template for Tweakpane",
-  "main": "dist/tweakpane-plugin-template.js",
-  "author": "cocopon",
+  "description": "Profiler plugin for Tweakpane",
+  "main": "dist/tweakpane-plugin-profiler.js",
+  "author": "0b5vr",
   "license": "MIT",
   "files": [
     "dist"

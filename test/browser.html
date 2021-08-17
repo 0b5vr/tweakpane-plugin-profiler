@@ -6,11 +6,11 @@
   </head>
   <body>
     <script src="../node_modules/tweakpane/dist/tweakpane.js"></script>
-    <script src="../dist/tweakpane-plugin-template.js"></script>
+    <script src="../dist/tweakpane-plugin-profiler.js"></script>
     <script>
       const pane = new Tweakpane.Pane();
 
-      pane.registerPlugin( TweakpaneTemplatePlugin );
+      pane.registerPlugin( TweakpaneProfilerBladePlugin );
 
       const profiler = pane.addBlade( {
         view: 'profiler',
