@@ -1,4 +1,4 @@
-import { ProfilerBladePlugin } from './ProfilerBladePlugin';
-
-// Export your plugin as constant `plugin`
-export const plugin = ProfilerBladePlugin;
+export { ProfilerBladeDefaultMeasureHandler } from './ProfilerBladeDefaultMeasureHandler';
+export type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
+export { ProfilerBladePlugin } from './ProfilerBladePlugin';
+export { ProfilerBladePlugin as plugin } from './ProfilerBladePlugin';

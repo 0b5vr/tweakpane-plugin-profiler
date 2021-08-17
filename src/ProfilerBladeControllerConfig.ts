@@ -1,7 +1,9 @@
-import { BufferedValue, Ticker, ViewProps } from '@tweakpane/core';
+import type { Ticker, ViewProps } from '@tweakpane/core';
 
 export interface ProfilerBladeControllerConfig {
   ticker: Ticker;
-  value: BufferedValue<number>;
+  targetLength: number;
+  unitString: string;
+  fractionDigits: number;
   viewProps: ViewProps;
 }

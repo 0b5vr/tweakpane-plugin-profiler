@@ -1,5 +1,5 @@
-import { colorArrayToHex } from './colorArrayToHex';
 import { dot } from './dot';
+import { rgbArrayToCssString } from './rgbArrayToCssString';
 import { saturate } from './saturate';
 
 /**
@@ -26,5 +26,5 @@ export function genTurboColormap( x: number ): string {
     dot( v4, v4KGreen ) + dot( v2, v2KGreen ),
     dot( v4, v4KBlue ) + dot( v2, v2KBlue )
   ];
-  return colorArrayToHex( color );
+  return rgbArrayToCssString( color );
 }

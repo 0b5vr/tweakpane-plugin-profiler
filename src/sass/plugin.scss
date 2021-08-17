@@ -2,11 +2,30 @@
 @import '../../node_modules/@tweakpane/core/lib/sass/plugin';
 
 .#{$prefix}-profilerv {
-  &_value {
-    color: var(--in-fg);
+  &_root {
+    background-color: var(--mo-bg);
+    width: 100%;
+    height: calc( 2.0 * var(--bld-us) );
   }
 
-  &_unit {
+  &_entryrect {
+    rx: var(--elm-br);
+    ry: var(--elm-br);
+    filter: saturate( 0.5 );
+  }
+
+  &_entryrect:hover {
+    filter: saturate( 1.0 );
+  }
+
+  &_tooltip {
+    fill: var(--mo-fg);
+  }
+
+  &_label {
     color: var(--in-fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

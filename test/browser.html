@@ -12,10 +12,44 @@
 
       pane.registerPlugin( TweakpaneTemplatePlugin );
 
-      pane.addBlade({
+      const profiler = pane.addBlade( {
         view: 'profiler',
         label: 'profiler',
-      });
+      } );
+
+      console.log( profiler );
+
+      function update() {
+        profiler.measure( 'haha', () => {
+          profiler.measure( 'wenis', () => {
+            let sum = 0.0;
+            for ( let sum = 0; sum < 1E5; sum ++ ) {
+              sum += Math.random();
+            }
+          } );
+
+          profiler.measure( 'wenis2', () => {
+            profiler.measure( 'aaaaaaaaaaaaaaaaaaaaaaaaaa', () => {
+              let sum = 0.0;
+              for ( let sum = 0; sum < 1E5; sum ++ ) {
+                sum += Math.random();
+              }
+            } );
+          } );
+
+          if ( Math.random() < 0.5 ) {
+            profiler.measure( 'wenis3', () => {
+              let sum = 0.0;
+              for ( let sum = 0; sum < 1E6; sum ++ ) {
+                sum += Math.random();
+              }
+            } );
+          }
+        } );
+
+        requestAnimationFrame( update );
+      }
+      requestAnimationFrame( update );
 
       window.pane = pane;
     </script>
