@@ -1,4 +1,5 @@
 import { ClassName } from '@tweakpane/core';
+import { ConsecutiveCacheMap } from './utils/ConsecutiveCacheMap';
 import { genTurboColormap } from './utils/genTurboColormap';
 import { saturate } from './utils/saturate';
 import type { ProfilerBladeViewConfig } from './ProfilerBladeViewConfig';
@@ -18,7 +19,7 @@ export class ProfilerBladeView implements View {
   private readonly svgRootElement_: SVGElement;
   private readonly entryContainerElement_: SVGElement;
   private readonly labelElement_: HTMLDivElement;
-  private readonly entryElementCacheMap_: Map<string, SVGElement>;
+  private readonly entryElementCacheMap_: ConsecutiveCacheMap<string, SVGElement>;
   private rootDeltaCache_: number;
   private hoveringEntry_: string | null;
 
@@ -44,7 +45,7 @@ export class ProfilerBladeView implements View {
     this.element.appendChild( this.labelElement_ );
 
     this.rootDeltaCache_ = 0.0;
-    this.entryElementCacheMap_ = new Map();
+    this.entryElementCacheMap_ = new ConsecutiveCacheMap();
 
     this.hoveringEntry_ = null;
   }
@@ -52,11 +53,18 @@ export class ProfilerBladeView implements View {
   public update( rootEntry: ProfilerEntry ): void {
     this.rootDeltaCache_ = rootEntry.delta;
 
-    const unit = 160.0 / Math.max( this.targetDelta, rootEntry.delta );
-    const updatedPathSet = new Set<string>();
-    this.addEntry_( rootEntry, this.entryContainerElement_, unit, updatedPathSet );
+    this.entryElementCacheMap_.resetUsedSet();
 
-    this.removeNotUpdatedElements_( updatedPathSet );
+    const unit = 160.0 / Math.max( this.targetDelta, rootEntry.delta );
+    this.addEntry_( rootEntry, this.entryContainerElement_, unit );
+
+    this.entryElementCacheMap_.vaporize( ( [ path, element ] ) => {
+      element.remove();
+
+      if ( this.hoveringEntry_ === path ) {
+        this.hoveringEntry_ = null;
+      }
+    } );
 
     this.updateTooltip_();
   }
@@ -77,23 +85,19 @@ export class ProfilerBladeView implements View {
     entry: ProfilerEntry,
     parent: SVGElement,
     unit: number,
-    updatedPathSet: Set<string>,
   ): SVGElement {
     const path = entry.path;
-    updatedPathSet.add( path );
 
-    let g = this.entryElementCacheMap_.get( path );
+    const g = this.entryElementCacheMap_.getOrCreate( path, () => {
+      const newG = document.createElementNS( 'http://www.w3.org/2000/svg', 'g' );
+      newG.classList.add( className( 'entry' ) );
+      parent.appendChild( newG );
 
-    if ( g == null ) {
-      g = document.createElementNS( 'http://www.w3.org/2000/svg', 'g' );
-      g.classList.add( className( 'entry' ) );
-      parent.appendChild( g );
-
-      this.entryElementCacheMap_.set( path, g );
+      this.entryElementCacheMap_.set( path, newG );
 
       const rect = document.createElementNS( 'http://www.w3.org/2000/svg', 'rect' );
       rect.classList.add( className( 'entryrect' ) );
-      g.appendChild( rect );
+      newG.appendChild( rect );
 
       rect.addEventListener( 'mouseenter', () => {
         this.hoveringEntry_ = path;
@@ -104,9 +108,11 @@ export class ProfilerBladeView implements View {
         this.hoveringEntry_ = null;
         this.updateTooltip_();
       } );
-    }
 
-    g!.setAttribute( 'data-delta', `${ entry.delta }` );
+      return newG;
+    } );
+
+    g.setAttribute( 'data-delta', `${ entry.delta }` );
 
     const rect = g.childNodes[ 0 ] as SVGRectElement;
 
@@ -119,7 +125,7 @@ export class ProfilerBladeView implements View {
     if ( entry.children.length > 0 ) {
       let x = 0.0;
       entry.children.forEach( ( child ) => {
-        const childElement = this.addEntry_( child, g!, unit, updatedPathSet );
+        const childElement = this.addEntry_( child, g, unit );
         childElement.setAttribute( 'transform', `translate( ${ x }, ${ 10.0 } )` );
         x += child.delta * unit;
       } );
@@ -130,18 +136,5 @@ export class ProfilerBladeView implements View {
 
   private deltaToDisplayDelta( delta: number ): string {
     return `${ delta.toFixed( this.fractionDigits ) } ${ this.deltaUnit }`;
-  }
-
-  private removeNotUpdatedElements_( updatedPathSet: Set<string> ): void {
-    Array.from( this.entryElementCacheMap_.entries() ).forEach( ( [ path, element ] ) => {
-      if ( !updatedPathSet.has( path ) ) {
-        element.remove();
-        this.entryElementCacheMap_.delete( path );
-
-        if ( this.hoveringEntry_ === path ) {
-          this.hoveringEntry_ = null;
-        }
-      }
-    } );
   }
 }
