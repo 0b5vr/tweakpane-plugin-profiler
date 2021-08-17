@@ -1,6 +1,6 @@
 export interface ProfilerEntry {
   name: string;
   path: string;
-  length: number;
+  delta: number;
   children: ProfilerEntry[];
 }

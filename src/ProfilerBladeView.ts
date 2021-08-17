@@ -11,20 +11,20 @@ const className = ClassName( 'profiler' );
 
 // Custom view class should implement `View` interface
 export class ProfilerBladeView implements View {
-  public targetLength: number;
-  public unitString: string;
+  public targetDelta: number;
+  public deltaUnit: string;
   public fractionDigits: number;
   public readonly element: HTMLElement;
   private readonly svgRootElement_: SVGElement;
   private readonly entryContainerElement_: SVGElement;
   private readonly labelElement_: HTMLDivElement;
   private readonly entryElementCacheMap_: Map<string, SVGElement>;
-  private rootLengthCache_: number;
+  private rootDeltaCache_: number;
   private hoveringEntry_: string | null;
 
   public constructor( doc: Document, config: ProfilerBladeViewConfig ) {
-    this.targetLength = config.targetLength;
-    this.unitString = config.unitString;
+    this.targetDelta = config.targetDelta;
+    this.deltaUnit = config.deltaUnit;
     this.fractionDigits = config.fractionDigits;
 
     this.element = doc.createElement( 'div' );
@@ -43,16 +43,16 @@ export class ProfilerBladeView implements View {
     this.labelElement_.classList.add( className( 'label' ) );
     this.element.appendChild( this.labelElement_ );
 
-    this.rootLengthCache_ = 0.0;
+    this.rootDeltaCache_ = 0.0;
     this.entryElementCacheMap_ = new Map();
 
     this.hoveringEntry_ = null;
   }
 
   public update( rootEntry: ProfilerEntry ): void {
-    this.rootLengthCache_ = rootEntry.length;
+    this.rootDeltaCache_ = rootEntry.delta;
 
-    const unit = 160.0 / Math.max( this.targetLength, rootEntry.length );
+    const unit = 160.0 / Math.max( this.targetDelta, rootEntry.delta );
     const updatedPathSet = new Set<string>();
     this.addEntry_( rootEntry, this.entryContainerElement_, unit, updatedPathSet );
 
@@ -65,11 +65,11 @@ export class ProfilerBladeView implements View {
     const path = this.hoveringEntry_;
 
     if ( path ) {
-      const dataLength = this.entryElementCacheMap_.get( path )?.getAttribute( 'data-length' );
-      const displayLength = this.lengthToDisplayLength( parseFloat( dataLength ?? '0.0' ) );
-      this.labelElement_.textContent = `${ displayLength }: ${ path }`;
+      const dataDelta = this.entryElementCacheMap_.get( path )?.getAttribute( 'data-delta' );
+      const displayDelta = this.deltaToDisplayDelta( parseFloat( dataDelta ?? '0.0' ) );
+      this.labelElement_.textContent = `${ displayDelta }: ${ path }`;
     } else {
-      this.labelElement_.textContent = this.lengthToDisplayLength( this.rootLengthCache_ );
+      this.labelElement_.textContent = this.deltaToDisplayDelta( this.rootDeltaCache_ );
     }
   }
 
@@ -106,14 +106,14 @@ export class ProfilerBladeView implements View {
       } );
     }
 
-    g!.setAttribute( 'data-length', `${ entry.length }` );
+    g!.setAttribute( 'data-delta', `${ entry.delta }` );
 
     const rect = g.childNodes[ 0 ] as SVGRectElement;
 
-    rect.setAttribute( 'width', `${ Math.max( 0.0, entry.length * unit - 1.0 ) }px` );
+    rect.setAttribute( 'width', `${ Math.max( 0.0, entry.delta * unit - 1.0 ) }px` );
     rect.setAttribute( 'height', `${ 9 }px` );
 
-    const turboX = 0.15 + 0.7 * saturate( entry.length / this.targetLength );
+    const turboX = 0.15 + 0.7 * saturate( entry.delta / this.targetDelta );
     rect.setAttribute( 'fill', genTurboColormap( turboX ) );
 
     if ( entry.children.length > 0 ) {
@@ -121,15 +121,15 @@ export class ProfilerBladeView implements View {
       entry.children.forEach( ( child ) => {
         const childElement = this.addEntry_( child, g!, unit, updatedPathSet );
         childElement.setAttribute( 'transform', `translate( ${ x }, ${ 10.0 } )` );
-        x += child.length * unit;
+        x += child.delta * unit;
       } );
     }
 
     return g;
   }
 
-  private lengthToDisplayLength( length: number ): string {
-    return `${ length.toFixed( this.fractionDigits ) } ${ this.unitString }`;
+  private deltaToDisplayDelta( delta: number ): string {
+    return `${ delta.toFixed( this.fractionDigits ) } ${ this.deltaUnit }`;
   }
 
   private removeNotUpdatedElements_( updatedPathSet: Set<string> ): void {

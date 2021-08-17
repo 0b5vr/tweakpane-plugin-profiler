@@ -10,7 +10,7 @@ import type { ProfilerEntry } from './ProfilerEntry';
 
 // Custom controller class should implement `Controller` interface
 export class ProfilerBladeController implements Controller<ProfilerBladeView> {
-  public targetLength: number;
+  public targetDelta: number;
   public measureHandler: ProfilerBladeMeasureHandler;
   public readonly view: ProfilerBladeView;
   public readonly viewProps: ViewProps;
@@ -20,7 +20,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
   private lastRootEntry_: ProfilerEntry;
 
   public constructor( doc: Document, config: ProfilerBladeControllerConfig ) {
-    this.targetLength = config.targetLength;
+    this.targetDelta = config.targetDelta;
 
     this.onTick_ = this.onTick_.bind( this );
 
@@ -30,8 +30,8 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
     this.viewProps = config.viewProps;
 
     this.view = new ProfilerBladeView( doc, {
-      targetLength: this.targetLength,
-      unitString: config.unitString,
+      targetDelta: this.targetDelta,
+      deltaUnit: config.deltaUnit,
       fractionDigits: config.fractionDigits,
       viewProps: this.viewProps,
     } );
@@ -46,7 +46,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
     this.lastRootEntry_ = {
       name: 'root',
       path: '/root',
-      length: 0.0,
+      delta: 0.0,
       children: [],
     };
   }
@@ -58,7 +58,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
     const entry: ProfilerEntry = {
       name,
       path,
-      length: 0.0,
+      delta: 0.0,
       children: [],
     };
 
@@ -68,7 +68,8 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
 
     this.entryStack_.push( entry );
 
-    entry.length = this.measureHandler.measure( path, fn );
+    const delta = this.measureHandler.measure( path, fn );
+    entry.delta = delta;
 
     this.entryStack_.pop();
 

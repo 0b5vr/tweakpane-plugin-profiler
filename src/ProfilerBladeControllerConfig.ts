@@ -3,8 +3,8 @@ import type { Ticker, ViewProps } from '@tweakpane/core';
 
 export interface ProfilerBladeControllerConfig {
   ticker: Ticker;
-  targetLength: number;
-  unitString: string;
+  targetDelta: number;
+  deltaUnit: string;
   fractionDigits: number;
   measureHandler: ProfilerBladeMeasureHandler;
   viewProps: ViewProps;

@@ -6,6 +6,8 @@ export class ProfilerBladeDefaultMeasureHandler implements ProfilerBladeMeasureH
 
     fn();
 
-    return performance.now() - begin;
+    const delta = performance.now() - begin;
+
+    return delta;
   }
 }

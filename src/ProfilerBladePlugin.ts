@@ -22,8 +22,8 @@ ProfilerBladePluginParams
     const p = ParamsParsers;
     const result = parseParams<ProfilerBladePluginParams>( params, {
       view: p.required.constant( 'profiler' ),
-      targetLength: p.optional.number,
-      unitString: p.optional.string,
+      targetDelta: p.optional.number,
+      deltaUnit: p.optional.string,
       fractionDigits: p.optional.number,
       label: p.optional.string,
       interval: p.optional.number,
@@ -35,8 +35,8 @@ ProfilerBladePluginParams
 
   controller( args ) {
     const interval = args.params.interval ?? 500;
-    const targetLength = args.params.targetLength ?? 16.67;
-    const unitString = args.params.unitString ?? 'ms';
+    const targetDelta = args.params.targetDelta ?? 16.67;
+    const deltaUnit = args.params.deltaUnit ?? 'ms';
     const fractionDigits = args.params.fractionDigits ?? 2;
     const measureHandler = args.params.measureHandler ?? new ProfilerBladeDefaultMeasureHandler();
 
@@ -47,8 +47,8 @@ ProfilerBladePluginParams
       } ),
       valueController: new ProfilerBladeController( args.document, {
         ticker: createTicker( args.document, interval ),
-        targetLength,
-        unitString,
+        targetDelta: targetDelta,
+        deltaUnit: deltaUnit,
         fractionDigits,
         viewProps: args.viewProps,
         measureHandler,

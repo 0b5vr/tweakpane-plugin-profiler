@@ -1,8 +1,8 @@
 import type { ViewProps } from '@tweakpane/core';
 
 export interface ProfilerBladeViewConfig {
-  targetLength: number;
-  unitString: string;
+  targetDelta: number;
+  deltaUnit: string;
   fractionDigits: number;
   viewProps: ViewProps;
 }

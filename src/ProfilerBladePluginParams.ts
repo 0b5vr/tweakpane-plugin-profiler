@@ -3,8 +3,8 @@ import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler'
 
 export interface ProfilerBladePluginParams extends BaseBladeParams {
   view: 'profiler';
-  targetLength?: number;
-  unitString?: string;
+  targetDelta?: number;
+  deltaUnit?: string;
   fractionDigits?: number;
   label?: string;
   interval?: number;
