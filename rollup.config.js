@@ -33,9 +33,7 @@ function getPlugins(css, shouldMinify) {
 				},
 			],
 		}),
-		Typescript({
-			tsconfig: 'src/tsconfig.json',
-		}),
+		Typescript(),
 		nodeResolve(),
 		Replace({
 			__css__: css,
