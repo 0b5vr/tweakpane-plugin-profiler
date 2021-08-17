@@ -3,6 +3,7 @@ import {
   Ticker,
   ViewProps,
 } from '@tweakpane/core';
+import { LatestPromiseHandler } from './utils/LatestPromiseHandler';
 import { ProfilerBladeView } from './ProfilerBladeView';
 import type { ProfilerBladeControllerConfig } from './ProfilerBladeControllerConfig';
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
@@ -17,7 +18,9 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
   private ticker_: Ticker;
 
   private entryStack_: ProfilerEntry[];
-  private lastRootEntry_: ProfilerEntry;
+  private pendings_: Promise<any>[];
+  private latestEntry_: ProfilerEntry;
+  private latestPromiseHandler_: LatestPromiseHandler<ProfilerEntry>;
 
   public constructor( doc: Document, config: ProfilerBladeControllerConfig ) {
     this.targetDelta = config.targetDelta;
@@ -43,12 +46,16 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
     this.measureHandler = config.measureHandler;
 
     this.entryStack_ = [];
-    this.lastRootEntry_ = {
+    this.pendings_ = [];
+    this.latestEntry_ = {
       name: 'root',
       path: '/root',
       delta: 0.0,
       children: [],
     };
+    this.latestPromiseHandler_ = new LatestPromiseHandler( ( entry ) => {
+      this.latestEntry_ = entry;
+    } );
   }
 
   public measure( name: string, fn: () => void ): void {
@@ -64,21 +71,25 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
 
     if ( parent != null ) {
       this.entryStack_[ this.entryStack_.length - 1 ].children.push( entry );
+    } else {
+      this.pendings_ = [];
     }
 
     this.entryStack_.push( entry );
 
-    const delta = this.measureHandler.measure( path, fn );
-    entry.delta = delta;
+    const promiseDelta = Promise.resolve( this.measureHandler.measure( path, fn ) );
+    promiseDelta.then( ( delta ) => { entry.delta = delta; } );
+    this.pendings_.push( promiseDelta );
 
     this.entryStack_.pop();
 
     if ( parent == null ) {
-      this.lastRootEntry_ = entry;
+      const promise = Promise.all( this.pendings_ ).then( () => entry );
+      this.latestPromiseHandler_.add( promise );
     }
   }
 
   private onTick_(): void {
-    this.view.update( this.lastRootEntry_ );
+    this.view.update( this.latestEntry_ );
   }
 }
