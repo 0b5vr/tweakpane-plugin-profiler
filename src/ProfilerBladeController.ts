@@ -7,9 +7,11 @@ import {
 import { HistoryPercentileCalculator } from './utils/HistoryPercentileCalculator';
 import { LatestPromiseHandler } from './utils/LatestPromiseHandler';
 import { ProfilerBladeView } from './ProfilerBladeView';
+import { arraySum } from './utils/arraySum';
 import type { ProfilerBladeControllerConfig } from './ProfilerBladeControllerConfig';
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
 import type { ProfilerEntry } from './ProfilerEntry';
+import type { ProfilerMeasureStackEntry } from './ProfilerMeasureStackEntry';
 
 // Custom controller class should implement `Controller` interface
 export class ProfilerBladeController implements Controller<ProfilerBladeView> {
@@ -20,8 +22,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
   public readonly viewProps: ViewProps;
   private ticker_: Ticker;
 
-  private entryStack_: ProfilerEntry[];
-  private pendings_: Promise<any>[];
+  private measureStack_: ProfilerMeasureStackEntry[];
   private latestEntry_: ProfilerEntry;
   private latestPromiseHandler_: LatestPromiseHandler<ProfilerEntry>;
   private readonly entryCalcCacheMap_: ConsecutiveCacheMap<string, HistoryPercentileCalculator>;
@@ -50,12 +51,14 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
 
     this.measureHandler = config.measureHandler;
 
-    this.entryStack_ = [];
-    this.pendings_ = [];
+    this.measureStack_ = [];
     this.latestEntry_ = {
       name: 'root',
       path: '/root',
       delta: 0.0,
+      median: 0.0,
+      selfDelta: 0.0,
+      selfMedian: 0.0,
       children: [],
     };
     this.latestPromiseHandler_ = new LatestPromiseHandler( ( entry ) => {
@@ -66,11 +69,10 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
   }
 
   public measure( name: string, fn: () => void ): void {
-    const parent = this.entryStack_[ this.entryStack_.length - 1 ];
+    const parent = this.measureStack_[ this.measureStack_.length - 1 ];
     const path = `${ parent?.path ?? '' }/${ name }`;
 
     if ( parent == null ) {
-      this.pendings_ = [];
       this.entryCalcCacheMap_.resetUsedSet();
     }
 
@@ -78,31 +80,40 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       return new HistoryPercentileCalculator( this.medianBufferSize );
     } );
 
-    const entry: ProfilerEntry = {
-      name,
+    const measureStackEntry: ProfilerMeasureStackEntry = {
       path,
-      delta: 0.0,
-      children: [],
+      promiseChildren: [],
     };
+    this.measureStack_.push( measureStackEntry );
 
-    if ( parent != null ) {
-      this.entryStack_[ this.entryStack_.length - 1 ].children.push( entry );
-    }
+    const promiseEntry = ( async (): Promise<ProfilerEntry> => {
+      const delta = await Promise.resolve( this.measureHandler.measure( path, fn ) );
 
-    this.entryStack_.push( entry );
+      const children = await Promise.all( measureStackEntry.promiseChildren );
+      const sumChildrenDelta = arraySum( children.map( ( child ) => child.delta ) );
+      const selfDelta = delta - sumChildrenDelta;
 
-    const promiseDelta = Promise.resolve( this.measureHandler.measure( path, fn ) );
-    const promiseMedian = promiseDelta.then( ( delta ) => {
-      calc.push( delta );
-      entry.delta = calc.median;
-    } );
-    this.pendings_.push( promiseMedian );
+      calc.push( selfDelta );
+      const selfMedian = calc.median;
 
-    this.entryStack_.pop();
+      const median = selfMedian + arraySum( children.map( ( child ) => child.median ) );
+
+      return {
+        name,
+        path,
+        delta,
+        median,
+        selfDelta,
+        selfMedian,
+        children,
+      };
+    } )();
+    parent?.promiseChildren.push( promiseEntry );
+
+    this.measureStack_.pop();
 
     if ( parent == null ) {
-      const promise = Promise.all( this.pendings_ ).then( () => entry );
-      this.latestPromiseHandler_.add( promise );
+      this.latestPromiseHandler_.add( promiseEntry );
       this.entryCalcCacheMap_.vaporize();
     }
   }

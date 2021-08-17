@@ -51,11 +51,11 @@ export class ProfilerBladeView implements View {
   }
 
   public update( rootEntry: ProfilerEntry ): void {
-    this.rootDeltaCache_ = rootEntry.delta;
+    this.rootDeltaCache_ = rootEntry.median;
 
     this.entryElementCacheMap_.resetUsedSet();
 
-    const unit = 160.0 / Math.max( this.targetDelta, rootEntry.delta );
+    const unit = 160.0 / Math.max( this.targetDelta, rootEntry.median );
     this.addEntry_( rootEntry, this.entryContainerElement_, unit );
 
     this.entryElementCacheMap_.vaporize( ( [ path, element ] ) => {
@@ -112,14 +112,14 @@ export class ProfilerBladeView implements View {
       return newG;
     } );
 
-    g.setAttribute( 'data-delta', `${ entry.delta }` );
+    g.setAttribute( 'data-delta', `${ entry.median }` );
 
     const rect = g.childNodes[ 0 ] as SVGRectElement;
 
-    rect.setAttribute( 'width', `${ Math.max( 0.0, entry.delta * unit - 1.0 ) }px` );
+    rect.setAttribute( 'width', `${ Math.max( 0.0, entry.median * unit - 1.0 ) }px` );
     rect.setAttribute( 'height', `${ 9 }px` );
 
-    const turboX = 0.15 + 0.7 * saturate( entry.delta / this.targetDelta );
+    const turboX = 0.15 + 0.7 * saturate( entry.median / this.targetDelta );
     rect.setAttribute( 'fill', genTurboColormap( turboX ) );
 
     if ( entry.children.length > 0 ) {
@@ -127,7 +127,7 @@ export class ProfilerBladeView implements View {
       entry.children.forEach( ( child ) => {
         const childElement = this.addEntry_( child, g, unit );
         childElement.setAttribute( 'transform', `translate( ${ x }, ${ 10.0 } )` );
-        x += child.delta * unit;
+        x += child.median * unit;
       } );
     }
 
