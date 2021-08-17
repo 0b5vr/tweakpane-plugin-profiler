@@ -2,6 +2,8 @@
 @import '../../node_modules/@tweakpane/core/lib/sass/plugin';
 
 .#{$prefix}-profilerv {
+  position: relative;
+
   &_root {
     background-color: var(--mo-bg);
     width: 100%;
@@ -11,6 +13,8 @@
   &_entryrect {
     rx: var(--elm-br);
     ry: var(--elm-br);
+    stroke: transparent;
+    stroke-width: 1px;
     filter: saturate( 0.5 );
   }
 
@@ -19,11 +23,24 @@
   }
 
   &_tooltip {
-    fill: var(--mo-fg);
+    position: absolute;
+    right: 100%;
+    top: 0;
+    overflow: hidden;
+    background: var(--bs-bg);
+  }
+
+  &_tooltipinside {
+    padding: 0 4px;
+    overflow: visible;
+    white-space: pre;
+    text-align: right;
+    background: var(--mo-bg);
+    color: var(--in-fg);
   }
 
   &_label {
-    color: var(--in-fg);
+    color: var(--mo-fg);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -17,10 +17,11 @@ export class ProfilerBladeView implements View {
   public fractionDigits: number;
   public readonly element: HTMLElement;
   private readonly svgRootElement_: SVGElement;
-  private readonly entryContainerElement_: SVGElement;
+  private readonly entryContainerElement_: SVGGElement;
+  private readonly tooltipElement_: HTMLDivElement;
+  private readonly tooltipInsideElement_: HTMLDivElement;
   private readonly labelElement_: HTMLDivElement;
-  private readonly entryElementCacheMap_: ConsecutiveCacheMap<string, SVGElement>;
-  private rootDeltaCache_: number;
+  private readonly entryElementCacheMap_: ConsecutiveCacheMap<string, SVGGElement>;
   private hoveringEntry_: string | null;
 
   public constructor( doc: Document, config: ProfilerBladeViewConfig ) {
@@ -38,20 +39,30 @@ export class ProfilerBladeView implements View {
 
     this.entryContainerElement_ = doc.createElementNS( 'http://www.w3.org/2000/svg', 'g' );
     this.entryContainerElement_.classList.add( className( 'container' ) );
+    this.entryContainerElement_.setAttribute( 'transform', 'translate( 1, 1 )' );
     this.svgRootElement_.appendChild( this.entryContainerElement_ );
+
+    this.tooltipElement_ = doc.createElement( 'div' );
+    this.tooltipElement_.classList.add( className( 'tooltip' ) );
+    this.tooltipElement_.style.display = 'none';
+    this.element.appendChild( this.tooltipElement_ );
+
+    this.tooltipInsideElement_ = doc.createElement( 'div' );
+    this.tooltipInsideElement_.classList.add( className( 'tooltipinside' ) );
+    this.tooltipElement_.appendChild( this.tooltipInsideElement_ );
 
     this.labelElement_ = doc.createElement( 'div' );
     this.labelElement_.classList.add( className( 'label' ) );
+    this.labelElement_.textContent = this.deltaToDisplayDelta( 0.0 );
     this.element.appendChild( this.labelElement_ );
 
-    this.rootDeltaCache_ = 0.0;
     this.entryElementCacheMap_ = new ConsecutiveCacheMap();
 
     this.hoveringEntry_ = null;
   }
 
   public update( rootEntry: ProfilerEntry ): void {
-    this.rootDeltaCache_ = rootEntry.median;
+    this.labelElement_.textContent = this.deltaToDisplayDelta( rootEntry.median );
 
     this.entryElementCacheMap_.resetUsedSet();
 
@@ -73,11 +84,17 @@ export class ProfilerBladeView implements View {
     const path = this.hoveringEntry_;
 
     if ( path ) {
-      const dataDelta = this.entryElementCacheMap_.get( path )?.getAttribute( 'data-delta' );
+      const element = this.entryElementCacheMap_.get( path );
+
+      const dataDelta = element?.getAttribute( 'data-delta' );
       const displayDelta = this.deltaToDisplayDelta( parseFloat( dataDelta ?? '0.0' ) );
-      this.labelElement_.textContent = `${ displayDelta }: ${ path }`;
+      const text = `${ path }\n${ displayDelta }`;
+
+      this.tooltipElement_.style.display = 'block';
+
+      this.tooltipInsideElement_.textContent = text;
     } else {
-      this.labelElement_.textContent = this.deltaToDisplayDelta( this.rootDeltaCache_ );
+      this.tooltipElement_.style.display = 'none';
     }
   }
 
