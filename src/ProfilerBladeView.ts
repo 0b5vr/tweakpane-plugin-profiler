@@ -62,11 +62,11 @@ export class ProfilerBladeView implements View {
   }
 
   public update( rootEntry: ProfilerEntry ): void {
-    this.labelElement_.textContent = this.deltaToDisplayDelta( rootEntry.median );
+    this.labelElement_.textContent = this.deltaToDisplayDelta( rootEntry.deltaMedian );
 
     this.entryElementCacheMap_.resetUsedSet();
 
-    const unit = 160.0 / Math.max( this.targetDelta, rootEntry.median );
+    const unit = 160.0 / Math.max( this.targetDelta, rootEntry.deltaMedian );
     this.addEntry_( rootEntry, this.entryContainerElement_, unit );
 
     this.entryElementCacheMap_.vaporize( ( [ path, element ] ) => {
@@ -129,14 +129,14 @@ export class ProfilerBladeView implements View {
       return newG;
     } );
 
-    g.setAttribute( 'data-delta', `${ entry.median }` );
+    g.setAttribute( 'data-delta', `${ entry.deltaMedian }` );
 
     const rect = g.childNodes[ 0 ] as SVGRectElement;
 
-    rect.setAttribute( 'width', `${ Math.max( 0.0, entry.median * unit - 1.0 ) }px` );
+    rect.setAttribute( 'width', `${ Math.max( 0.01, entry.deltaMedian * unit - 1.0 ) }px` );
     rect.setAttribute( 'height', `${ 9 }px` );
 
-    const turboX = 0.15 + 0.7 * saturate( entry.median / this.targetDelta );
+    const turboX = 0.15 + 0.7 * saturate( entry.deltaMedian / this.targetDelta );
     rect.setAttribute( 'fill', genTurboColormap( turboX ) );
 
     if ( entry.children.length > 0 ) {
@@ -144,7 +144,7 @@ export class ProfilerBladeView implements View {
       entry.children.forEach( ( child ) => {
         const childElement = this.addEntry_( child, g, unit );
         childElement.setAttribute( 'transform', `translate( ${ x }, ${ 10.0 } )` );
-        x += child.median * unit;
+        x += child.deltaMedian * unit;
       } );
     }
 

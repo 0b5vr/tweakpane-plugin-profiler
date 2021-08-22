@@ -2,8 +2,8 @@ export interface ProfilerEntry {
   name: string;
   path: string;
   delta: number;
-  median: number;
+  deltaMedian: number;
   selfDelta: number;
-  selfMedian: number;
+  selfDeltaMedian: number;
   children: ProfilerEntry[];
 }

@@ -56,9 +56,9 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       name: 'root',
       path: '/root',
       delta: 0.0,
-      median: 0.0,
+      deltaMedian: 0.0,
       selfDelta: 0.0,
-      selfMedian: 0.0,
+      selfDeltaMedian: 0.0,
       children: [],
     };
     this.latestPromiseHandler_ = new LatestPromiseHandler( ( entry ) => {
@@ -94,17 +94,18 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       const selfDelta = delta - sumChildrenDelta;
 
       calc.push( selfDelta );
-      const selfMedian = calc.median;
+      const selfDeltaMedian = calc.median;
 
-      const median = selfMedian + arraySum( children.map( ( child ) => child.median ) );
+      const sumChildDeltaMedian = arraySum( children.map( ( child ) => child.deltaMedian ) );
+      const deltaMedian = selfDeltaMedian + sumChildDeltaMedian;
 
       return {
         name,
         path,
         delta,
-        median,
+        deltaMedian,
         selfDelta,
-        selfMedian,
+        selfDeltaMedian,
         children,
       };
     } )();
