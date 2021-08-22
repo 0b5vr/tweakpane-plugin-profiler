@@ -10,9 +10,7 @@
   ],
   "scripts": {
     "prepare": "run-s clean build",
-    "prepublishOnly": "npm test",
     "start": "npm run watch",
-    "test": "eslint --ext .ts 'src/**/*.ts'",
     "assets": "run-s clean build assets:version assets:zip",
     "assets:version": "node scripts/assets-append-version.js",
     "assets:zip": "zip -x '*types*' -j -r $(cat package.json | npx json name)-$(cat package.json | npx json version).zip dist",
