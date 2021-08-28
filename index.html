@@ -2,56 +2,118 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title></title>
+    <title>@0b5vr/tweakpane-plugin-profiler</title>
+    <link rel="stylesheet" href="https://www.unpkg.com/codemirror@5.62.3/lib/codemirror.css" />
+    <link rel="stylesheet" href="https://www.unpkg.com/codemirror@5.62.3/theme/monokai.css" />
+    <style>
+      .CodeMirror {
+        width: 600px;
+        height: 600px;
+      }
+    </style>
   </head>
   <body>
+    <textarea id="textareaEditor">// https://github.com/0b5vr/tweakpane-plugin-profiler
+// Ctrl+S or Ctrl+R to apply changes
+
+// == setup tweakpane and the plugin ===============================================================
+const pane = new Tweakpane.Pane();
+
+pane.registerPlugin( TweakpaneProfilerBladePlugin );
+
+const profiler = pane.addBlade( {
+  view: 'profiler',
+  label: 'profiler',
+} );
+
+console.log( profiler );
+
+// == random expensive functions ===================================================================
+function abuseRandom() {
+  let sum = 0.0;
+  for ( let sum = 0; sum < 1E4; sum ++ ) {
+    sum += Math.random();
+  }
+}
+
+function abuseSin() {
+  let sum = 0.0;
+  for ( let sum = 0; sum < 1E4; sum ++ ) {
+    sum += Math.sin( 1.0 );
+  }
+}
+
+function abuseFind() {
+  for ( let sum = 0; sum < 1E5; sum ++ ) {
+    /define/.test( 'undefined' );
+  }
+}
+
+// == update =======================================================================================
+let stop = false;
+
+function update() {
+  if ( stop ) { return; }
+
+  profiler.measure( 'update', () => {
+    profiler.measure( 'math', () => {
+      profiler.measure( 'abuseRandom', () => {
+        abuseRandom();
+      } );
+
+      profiler.measure( 'abuseSin', () => {
+        abuseSin();
+      } );
+    } );
+
+    profiler.measure( 'abuseFind', () => {
+      abuseFind();
+    } );
+  } );
+
+  requestAnimationFrame( update );
+}
+requestAnimationFrame( update );
+
+// == unload handler ===============================================================================
+playground.onUnload = () => {
+  stop = true;
+  pane.dispose();
+};
+</textarea>
+    <script src="https://www.unpkg.com/codemirror@5.62.3/lib/codemirror.js"></script>
+    <script src="https://www.unpkg.com/codemirror@5.62.3/addon/comment/comment.js"></script>
+    <script src="https://www.unpkg.com/codemirror@5.62.3/keymap/sublime.js"></script>
+    <script src="https://www.unpkg.com/codemirror@5.62.3/mode/javascript/javascript.js"></script>
     <script src="https://unpkg.com/tweakpane@3.0.5/dist/tweakpane.js"></script>
     <script src="./dist/tweakpane-plugin-profiler.js"></script>
     <script>
-      const pane = new Tweakpane.Pane();
-
-      pane.registerPlugin( TweakpaneProfilerBladePlugin );
-
-      const profiler = pane.addBlade( {
-        view: 'profiler',
-        label: 'profiler',
+      const textareaEditor = document.getElementById( 'textareaEditor' );
+      const editor = CodeMirror.fromTextArea( textareaEditor, {
+        mode: 'javascript',
+        keyMap: 'sublime',
+        theme: 'monokai',
+        lineNumbers: true,
+      } );
+      editor.addKeyMap( {
+        'Ctrl-S': () => {
+          run();
+        },
+        'Ctrl-R': () => {
+          run();
+        },
       } );
 
-      console.log( profiler );
-
-      function update() {
-        profiler.measure( 'haha', () => {
-          profiler.measure( 'wenis', () => {
-            let sum = 0.0;
-            for ( let sum = 0; sum < 1E5; sum ++ ) {
-              sum += Math.random();
-            }
-          } );
-
-          profiler.measure( 'wenis2', () => {
-            profiler.measure( 'aaaaaaaaaaaaaaaaaaaaaaaaaa', () => {
-              let sum = 0.0;
-              for ( let sum = 0; sum < 1E5; sum ++ ) {
-                sum += Math.random();
-              }
-            } );
-          } );
-
-          if ( Math.random() < 0.5 ) {
-            profiler.measure( 'wenis3', () => {
-              let sum = 0.0;
-              for ( let sum = 0; sum < 1E6; sum ++ ) {
-                sum += Math.random();
-              }
-            } );
-          }
-        } );
-
-        requestAnimationFrame( update );
+      const playground = {
+        onUnload: () => {},
       }
-      requestAnimationFrame( update );
 
-      window.pane = pane;
+      function run() {
+        playground.onUnload?.();
+        eval( editor.getValue() );
+      }
+
+      run();
     </script>
   </body>
 </html>
