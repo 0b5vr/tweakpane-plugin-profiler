@@ -3,7 +3,6 @@ name: Publish gh-pages
 on:
   push:
     branches:
-      - dev
       - release
 
 defaults:
