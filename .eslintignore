@@ -1,6 +1,6 @@
 /dist/**/*
 /docs/**/*
-/ts3.*/**/*
+/ts*/**/*
 /types/**/*
 .eslintrc.js
 rollup.config.js

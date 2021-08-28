@@ -1,5 +1,7 @@
 /.vscode/
 /dist/
+/ts*/
+/types/
 /*.zip
 
 ### https://raw.github.com/github/gitignore//Node.gitignore
