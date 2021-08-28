@@ -4,7 +4,7 @@
 
 Profiler plugin for Tweakpane
 
-![profiler](./readme-images/profiler.png)
+![profiler](https://github.com/0b5vr/tweakpane-plugin-profiler/raw/dev/readme-images/profiler.png)
 
 [Sandbox](https://0b5vr.github.io/tweakpane-plugin-profiler)
 
