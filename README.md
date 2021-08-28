@@ -2,8 +2,9 @@
 
 Profiler plugin for Tweakpane
 
-```html
+![profiler](./readme-images/profiler.png)
 
+```html
 <script src="https://unpkg.com/tweakpane@3.0.5/dist/tweakpane.js"></script>
 <script src="./tweakpane-plugin-profiler.js"></script>
 <script>
