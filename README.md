@@ -6,6 +6,8 @@ Profiler plugin for Tweakpane
 
 ![profiler](./readme-images/profiler.png)
 
+[Sandbox](https://0b5vr.github.io/tweakpane-plugin-profiler)
+
 ```html
 <script src="https://unpkg.com/tweakpane@3.0.5/dist/tweakpane.js"></script>
 <script src="./tweakpane-plugin-profiler.js"></script>
