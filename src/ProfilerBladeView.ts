@@ -15,6 +15,7 @@ export class ProfilerBladeView implements View {
   public targetDelta: number;
   public deltaUnit: string;
   public fractionDigits: number;
+  public calcMode: 'frame' | 'mean' | 'median';
   public readonly element: HTMLElement;
   private readonly svgRootElement_: SVGElement;
   private readonly entryContainerElement_: SVGGElement;
@@ -28,6 +29,7 @@ export class ProfilerBladeView implements View {
     this.targetDelta = config.targetDelta;
     this.deltaUnit = config.deltaUnit;
     this.fractionDigits = config.fractionDigits;
+    this.calcMode = config.calcMode;
 
     this.element = doc.createElement( 'div' );
     this.element.classList.add( className() );
@@ -62,11 +64,13 @@ export class ProfilerBladeView implements View {
   }
 
   public update( rootEntry: ProfilerEntry ): void {
-    this.labelElement_.textContent = this.deltaToDisplayDelta( rootEntry.deltaMedian );
+    const rootEntryDelta = this.entryToDelta( rootEntry );
+
+    this.labelElement_.textContent = this.deltaToDisplayDelta( rootEntryDelta );
 
     this.entryElementCacheMap_.resetUsedSet();
 
-    const unit = 160.0 / Math.max( this.targetDelta, rootEntry.deltaMedian );
+    const unit = 160.0 / Math.max( this.targetDelta, rootEntryDelta );
     this.addEntry_( rootEntry, this.entryContainerElement_, unit );
 
     this.entryElementCacheMap_.vaporize( ( [ path, element ] ) => {
@@ -129,14 +133,16 @@ export class ProfilerBladeView implements View {
       return newG;
     } );
 
-    g.setAttribute( 'data-delta', `${ entry.deltaMedian }` );
+    const delta = this.entryToDelta( entry );
+
+    g.setAttribute( 'data-delta', `${ delta }` );
 
     const rect = g.childNodes[ 0 ] as SVGRectElement;
 
-    rect.setAttribute( 'width', `${ Math.max( 0.01, entry.deltaMedian * unit - 1.0 ) }px` );
+    rect.setAttribute( 'width', `${ Math.max( 0.01, delta * unit - 1.0 ) }px` );
     rect.setAttribute( 'height', `${ 9 }px` );
 
-    const turboX = 0.15 + 0.7 * saturate( entry.deltaMedian / this.targetDelta );
+    const turboX = 0.15 + 0.7 * saturate( delta / this.targetDelta );
     rect.setAttribute( 'fill', genTurboColormap( turboX ) );
 
     if ( entry.children.length > 0 ) {
@@ -144,11 +150,23 @@ export class ProfilerBladeView implements View {
       entry.children.forEach( ( child ) => {
         const childElement = this.addEntry_( child, g, unit );
         childElement.setAttribute( 'transform', `translate( ${ x }, ${ 10.0 } )` );
-        x += child.deltaMedian * unit;
+        x += this.entryToDelta( child ) * unit;
       } );
     }
 
     return g;
+  }
+
+  private entryToDelta( entry: ProfilerEntry ): number {
+    if ( this.calcMode === 'frame' ) {
+      return entry.delta;
+    } else if ( this.calcMode === 'mean' ) {
+      return entry.deltaMean;
+    } else if ( this.calcMode === 'median' ) {
+      return entry.deltaMedian;
+    } else {
+      throw new Error( 'Unreachable! calcMode must be one of "frame", "mean", or "median"' );
+    }
   }
 
   private deltaToDisplayDelta( delta: number ): string {

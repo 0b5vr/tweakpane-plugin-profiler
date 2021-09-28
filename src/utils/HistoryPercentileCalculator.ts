@@ -2,7 +2,6 @@ import { binarySearch } from './binarySearch';
 
 /**
  * Useful for fps calc
- * See also: {@link HistoryMeanCalculator}
  */
 export class HistoryPercentileCalculator {
   private __history: number[] = [];

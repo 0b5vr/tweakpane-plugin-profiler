@@ -4,6 +4,7 @@ import {
   Ticker,
   ViewProps,
 } from '@tweakpane/core';
+import { HistoryMeanCalculator } from './utils/HistoryMeanCalculator';
 import { HistoryPercentileCalculator } from './utils/HistoryPercentileCalculator';
 import { LatestPromiseHandler } from './utils/LatestPromiseHandler';
 import { ProfilerBladeView } from './ProfilerBladeView';
@@ -16,7 +17,7 @@ import type { ProfilerMeasureStackEntry } from './ProfilerMeasureStackEntry';
 // Custom controller class should implement `Controller` interface
 export class ProfilerBladeController implements Controller<ProfilerBladeView> {
   public targetDelta: number;
-  public medianBufferSize: number;
+  public bufferSize: number;
   public measureHandler: ProfilerBladeMeasureHandler;
   public readonly view: ProfilerBladeView;
   public readonly viewProps: ViewProps;
@@ -25,11 +26,14 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
   private measureStack_: ProfilerMeasureStackEntry[];
   private latestEntry_: ProfilerEntry;
   private latestPromiseHandler_: LatestPromiseHandler<ProfilerEntry>;
-  private readonly entryCalcCacheMap_: ConsecutiveCacheMap<string, HistoryPercentileCalculator>;
+  private readonly entryCalcCacheMap_: ConsecutiveCacheMap<string, {
+    meanCalc: HistoryMeanCalculator,
+    medianCalc: HistoryPercentileCalculator,
+  }>;
 
   public constructor( doc: Document, config: ProfilerBladeControllerConfig ) {
     this.targetDelta = config.targetDelta;
-    this.medianBufferSize = config.medianBufferSize;
+    this.bufferSize = config.bufferSize;
 
     this.onTick_ = this.onTick_.bind( this );
 
@@ -42,6 +46,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       targetDelta: this.targetDelta,
       deltaUnit: config.deltaUnit,
       fractionDigits: config.fractionDigits,
+      calcMode: config.calcMode,
       viewProps: this.viewProps,
     } );
 
@@ -56,8 +61,10 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       name: 'root',
       path: '/root',
       delta: 0.0,
+      deltaMean: 0.0,
       deltaMedian: 0.0,
       selfDelta: 0.0,
+      selfDeltaMean: 0.0,
       selfDeltaMedian: 0.0,
       children: [],
     };
@@ -76,8 +83,11 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       this.entryCalcCacheMap_.resetUsedSet();
     }
 
-    const calc = this.entryCalcCacheMap_.getOrCreate( path, () => {
-      return new HistoryPercentileCalculator( this.medianBufferSize );
+    const { meanCalc, medianCalc } = this.entryCalcCacheMap_.getOrCreate( path, () => {
+      return {
+        meanCalc: new HistoryMeanCalculator( this.bufferSize ),
+        medianCalc: new HistoryPercentileCalculator( this.bufferSize ),
+      };
     } );
 
     const measureStackEntry: ProfilerMeasureStackEntry = {
@@ -93,18 +103,24 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       const sumChildrenDelta = arraySum( children.map( ( child ) => child.delta ) );
       const selfDelta = delta - sumChildrenDelta;
 
-      calc.push( selfDelta );
-      const selfDeltaMedian = calc.median;
+      meanCalc.push( selfDelta );
+      medianCalc.push( selfDelta );
+      const selfDeltaMean = meanCalc.mean;
+      const selfDeltaMedian = medianCalc.median;
 
+      const sumChildDeltaMean = arraySum( children.map( ( child ) => child.deltaMean ) );
       const sumChildDeltaMedian = arraySum( children.map( ( child ) => child.deltaMedian ) );
+      const deltaMean = selfDeltaMean + sumChildDeltaMean;
       const deltaMedian = selfDeltaMedian + sumChildDeltaMedian;
 
       return {
         name,
         path,
         delta,
+        deltaMean,
         deltaMedian,
         selfDelta,
+        selfDeltaMean,
         selfDeltaMedian,
         children,
       };

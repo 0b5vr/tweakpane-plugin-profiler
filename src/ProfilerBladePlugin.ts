@@ -10,6 +10,17 @@ import type {
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
 import type { ProfilerBladePluginParams } from './ProfilerBladePluginParams';
 
+function parseCalcMode( value: unknown ): 'frame' | 'mean' | 'median' | undefined {
+  switch ( value ) {
+  case 'frame':
+  case 'mean':
+  case 'median':
+    return value;
+  default:
+    return undefined;
+  }
+}
+
 export const ProfilerBladePlugin: BladePlugin<
 ProfilerBladePluginParams
 > = {
@@ -23,9 +34,10 @@ ProfilerBladePluginParams
     const result = parseParams<ProfilerBladePluginParams>( params, {
       view: p.required.constant( 'profiler' ),
       targetDelta: p.optional.number,
-      medianBufferSize: p.optional.number,
+      bufferSize: p.optional.number,
       deltaUnit: p.optional.string,
       fractionDigits: p.optional.number,
+      calcMode: p.optional.custom( parseCalcMode ),
       label: p.optional.string,
       interval: p.optional.number,
       measureHandler: p.optional.raw as ParamsParser<ProfilerBladeMeasureHandler>,
@@ -37,9 +49,10 @@ ProfilerBladePluginParams
   controller( args ) {
     const interval = args.params.interval ?? 500;
     const targetDelta = args.params.targetDelta ?? 16.67;
-    const medianBufferSize = args.params.medianBufferSize ?? 30;
+    const bufferSize = args.params.bufferSize ?? 30;
     const deltaUnit = args.params.deltaUnit ?? 'ms';
     const fractionDigits = args.params.fractionDigits ?? 2;
+    const calcMode = args.params.calcMode ?? 'mean';
     const measureHandler = args.params.measureHandler ?? new ProfilerBladeDefaultMeasureHandler();
 
     return new LabelController( args.document, {
@@ -50,9 +63,10 @@ ProfilerBladePluginParams
       valueController: new ProfilerBladeController( args.document, {
         ticker: createTicker( args.document, interval ),
         targetDelta,
-        medianBufferSize,
+        bufferSize,
         deltaUnit,
         fractionDigits,
+        calcMode,
         viewProps: args.viewProps,
         measureHandler,
       } ),
