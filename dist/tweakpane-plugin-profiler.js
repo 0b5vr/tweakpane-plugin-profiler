@@ -554,6 +554,67 @@
         }
     }
 
+    /**
+     * Useful for tap tempo
+     */
+    class HistoryMeanCalculator {
+        constructor(length) {
+            this.__recalcForEach = 0;
+            this.__countUntilRecalc = 0;
+            this.__history = [];
+            this.__index = 0;
+            this.__count = 0;
+            this.__cache = 0;
+            this.__length = length;
+            this.__recalcForEach = length;
+            for (let i = 0; i < length; i++) {
+                this.__history[i] = 0;
+            }
+        }
+        get mean() {
+            const count = Math.min(this.__count, this.__length);
+            return count === 0 ? 0.0 : this.__cache / count;
+        }
+        get recalcForEach() {
+            return this.__recalcForEach;
+        }
+        set recalcForEach(value) {
+            const delta = value - this.__recalcForEach;
+            this.__recalcForEach = value;
+            this.__countUntilRecalc = Math.max(0, this.__countUntilRecalc + delta);
+        }
+        reset() {
+            this.__index = 0;
+            this.__count = 0;
+            this.__cache = 0;
+            this.__countUntilRecalc = 0;
+            for (let i = 0; i < this.__length; i++) {
+                this.__history[i] = 0;
+            }
+        }
+        push(value) {
+            const prev = this.__history[this.__index];
+            this.__history[this.__index] = value;
+            this.__count++;
+            this.__index = (this.__index + 1) % this.__length;
+            if (this.__countUntilRecalc === 0) {
+                this.recalc();
+            }
+            else {
+                this.__countUntilRecalc--;
+                this.__cache -= prev;
+                this.__cache += value;
+            }
+        }
+        recalc() {
+            this.__countUntilRecalc = this.__recalcForEach;
+            const sum = this.__history
+                .slice(0, Math.min(this.__count, this.__length))
+                .reduce((sum, v) => sum + v, 0);
+            this.__cache = sum;
+        }
+    }
+
     // yoinked from https://stackoverflow.com/questions/1344500/efficient-way-to-insert-a-number-into-a-sorted-array-of-numbers
     function binarySearch(array, elementOrCompare) {
         if (typeof elementOrCompare !== 'function') {
@@ -578,7 +639,6 @@
 
     /**
      * Useful for fps calc
-     * See also: {@link HistoryMeanCalculator}
      */
     class HistoryPercentileCalculator {
         constructor(length) {
@@ -685,6 +745,7 @@
             this.targetDelta = config.targetDelta;
             this.deltaUnit = config.deltaUnit;
             this.fractionDigits = config.fractionDigits;
+            this.calcMode = config.calcMode;
             this.element = doc.createElement('div');
             this.element.classList.add(className());
             config.viewProps.bindClassModifiers(this.element);
@@ -710,9 +771,10 @@
             this.hoveringEntry_ = null;
         }
         update(rootEntry) {
-            this.labelElement_.textContent = this.deltaToDisplayDelta(rootEntry.deltaMedian);
+            const rootEntryDelta = this.entryToDelta(rootEntry);
+            this.labelElement_.textContent = this.deltaToDisplayDelta(rootEntryDelta);
             this.entryElementCacheMap_.resetUsedSet();
-            const unit = 160.0 / Math.max(this.targetDelta, rootEntry.deltaMedian);
+            const unit = 160.0 / Math.max(this.targetDelta, rootEntryDelta);
             this.addEntry_(rootEntry, this.entryContainerElement_, unit);
             this.entryElementCacheMap_.vaporize(([path, element]) => {
                 element.remove();
@@ -756,21 +818,36 @@
                 });
                 return newG;
             });
-            g.setAttribute('data-delta', `${entry.deltaMedian}`);
+            const delta = this.entryToDelta(entry);
+            g.setAttribute('data-delta', `${delta}`);
             const rect = g.childNodes[0];
-            rect.setAttribute('width', `${Math.max(0.01, entry.deltaMedian * unit - 1.0)}px`);
+            rect.setAttribute('width', `${Math.max(0.01, delta * unit - 1.0)}px`);
             rect.setAttribute('height', `${9}px`);
-            const turboX = 0.15 + 0.7 * saturate(entry.deltaMedian / this.targetDelta);
+            const turboX = 0.15 + 0.7 * saturate(delta / this.targetDelta);
             rect.setAttribute('fill', genTurboColormap(turboX));
             if (entry.children.length > 0) {
                 let x = 0.0;
                 entry.children.forEach((child) => {
                     const childElement = this.addEntry_(child, g, unit);
                     childElement.setAttribute('transform', `translate( ${x}, ${10.0} )`);
-                    x += child.deltaMedian * unit;
+                    x += this.entryToDelta(child) * unit;
                 });
             }
             return g;
+        }
+        entryToDelta(entry) {
+            if (this.calcMode === 'frame') {
+                return entry.delta;
+            }
+            else if (this.calcMode === 'mean') {
+                return entry.deltaMean;
+            }
+            else if (this.calcMode === 'median') {
+                return entry.deltaMedian;
+            }
+            else {
+                throw new Error('Unreachable! calcMode must be one of "frame", "mean", or "median"');
+            }
         }
         deltaToDisplayDelta(delta) {
             return `${delta.toFixed(this.fractionDigits)} ${this.deltaUnit}`;
@@ -790,7 +867,7 @@
     class ProfilerBladeController {
         constructor(doc, config) {
             this.targetDelta = config.targetDelta;
-            this.medianBufferSize = config.medianBufferSize;
+            this.bufferSize = config.bufferSize;
             this.onTick_ = this.onTick_.bind(this);
             this.ticker_ = config.ticker;
             this.ticker_.emitter.on('tick', this.onTick_);
@@ -799,6 +876,7 @@
                 targetDelta: this.targetDelta,
                 deltaUnit: config.deltaUnit,
                 fractionDigits: config.fractionDigits,
+                calcMode: config.calcMode,
                 viewProps: this.viewProps,
             });
             this.viewProps.handleDispose(() => {
@@ -810,8 +888,10 @@
                 name: 'root',
                 path: '/root',
                 delta: 0.0,
+                deltaMean: 0.0,
                 deltaMedian: 0.0,
                 selfDelta: 0.0,
+                selfDeltaMean: 0.0,
                 selfDeltaMedian: 0.0,
                 children: [],
             };
@@ -827,8 +907,11 @@
             if (parent == null) {
                 this.entryCalcCacheMap_.resetUsedSet();
             }
-            const calc = this.entryCalcCacheMap_.getOrCreate(path, () => {
-                return new HistoryPercentileCalculator(this.medianBufferSize);
+            const { meanCalc, medianCalc } = this.entryCalcCacheMap_.getOrCreate(path, () => {
+                return {
+                    meanCalc: new HistoryMeanCalculator(this.bufferSize),
+                    medianCalc: new HistoryPercentileCalculator(this.bufferSize),
+                };
             });
             const measureStackEntry = {
                 path,
@@ -840,16 +923,22 @@
                 const children = yield Promise.all(measureStackEntry.promiseChildren);
                 const sumChildrenDelta = arraySum(children.map((child) => child.delta));
                 const selfDelta = delta - sumChildrenDelta;
-                calc.push(selfDelta);
-                const selfDeltaMedian = calc.median;
+                meanCalc.push(selfDelta);
+                medianCalc.push(selfDelta);
+                const selfDeltaMean = meanCalc.mean;
+                const selfDeltaMedian = medianCalc.median;
+                const sumChildDeltaMean = arraySum(children.map((child) => child.deltaMean));
                 const sumChildDeltaMedian = arraySum(children.map((child) => child.deltaMedian));
+                const deltaMean = selfDeltaMean + sumChildDeltaMean;
                 const deltaMedian = selfDeltaMedian + sumChildDeltaMedian;
                 return {
                     name,
                     path,
                     delta,
+                    deltaMean,
                     deltaMedian,
                     selfDelta,
+                    selfDeltaMean,
                     selfDeltaMedian,
                     children,
                 };
@@ -872,6 +961,16 @@
             : new IntervalTicker(document, interval !== null && interval !== void 0 ? interval : Constants.monitor.defaultInterval);
     }
 
+    function parseCalcMode(value) {
+        switch (value) {
+            case 'frame':
+            case 'mean':
+            case 'median':
+                return value;
+            default:
+                return undefined;
+        }
+    }
     const ProfilerBladePlugin = {
         id: 'profiler',
         type: 'blade',
@@ -882,9 +981,10 @@
             const result = parseParams(params, {
                 view: p.required.constant('profiler'),
                 targetDelta: p.optional.number,
-                medianBufferSize: p.optional.number,
+                bufferSize: p.optional.number,
                 deltaUnit: p.optional.string,
                 fractionDigits: p.optional.number,
+                calcMode: p.optional.custom(parseCalcMode),
                 label: p.optional.string,
                 interval: p.optional.number,
                 measureHandler: p.optional.raw,
@@ -892,13 +992,14 @@
             return result ? { params: result } : null;
         },
         controller(args) {
-            var _a, _b, _c, _d, _e, _f;
+            var _a, _b, _c, _d, _e, _f, _g;
             const interval = (_a = args.params.interval) !== null && _a !== void 0 ? _a : 500;
             const targetDelta = (_b = args.params.targetDelta) !== null && _b !== void 0 ? _b : 16.67;
-            const medianBufferSize = (_c = args.params.medianBufferSize) !== null && _c !== void 0 ? _c : 30;
+            const bufferSize = (_c = args.params.bufferSize) !== null && _c !== void 0 ? _c : 30;
             const deltaUnit = (_d = args.params.deltaUnit) !== null && _d !== void 0 ? _d : 'ms';
             const fractionDigits = (_e = args.params.fractionDigits) !== null && _e !== void 0 ? _e : 2;
-            const measureHandler = (_f = args.params.measureHandler) !== null && _f !== void 0 ? _f : new ProfilerBladeDefaultMeasureHandler();
+            const calcMode = (_f = args.params.calcMode) !== null && _f !== void 0 ? _f : 'mean';
+            const measureHandler = (_g = args.params.measureHandler) !== null && _g !== void 0 ? _g : new ProfilerBladeDefaultMeasureHandler();
             return new LabelController(args.document, {
                 blade: args.blade,
                 props: ValueMap.fromObject({
@@ -907,9 +1008,10 @@
                 valueController: new ProfilerBladeController(args.document, {
                     ticker: createTicker(args.document, interval),
                     targetDelta,
-                    medianBufferSize,
+                    bufferSize,
                     deltaUnit,
                     fractionDigits,
+                    calcMode,
                     viewProps: args.viewProps,
                     measureHandler,
                 }),

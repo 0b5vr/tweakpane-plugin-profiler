@@ -4,7 +4,7 @@ import type { ProfilerBladeControllerConfig } from './ProfilerBladeControllerCon
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
 export declare class ProfilerBladeController implements Controller<ProfilerBladeView> {
     targetDelta: number;
-    medianBufferSize: number;
+    bufferSize: number;
     measureHandler: ProfilerBladeMeasureHandler;
     readonly view: ProfilerBladeView;
     readonly viewProps: ViewProps;

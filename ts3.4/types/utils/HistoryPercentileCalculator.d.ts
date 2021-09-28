@@ -1,6 +1,5 @@
 /**
  * Useful for fps calc
- * See also: {@link HistoryMeanCalculator}
  */
 export declare class HistoryPercentileCalculator {
     private __history;

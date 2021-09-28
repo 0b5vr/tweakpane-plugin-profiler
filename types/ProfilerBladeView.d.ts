@@ -5,6 +5,7 @@ export declare class ProfilerBladeView implements View {
     targetDelta: number;
     deltaUnit: string;
     fractionDigits: number;
+    calcMode: 'frame' | 'mean' | 'median';
     readonly element: HTMLElement;
     private readonly svgRootElement_;
     private readonly entryContainerElement_;
@@ -17,5 +18,6 @@ export declare class ProfilerBladeView implements View {
     update(rootEntry: ProfilerEntry): void;
     private updateTooltip_;
     private addEntry_;
+    private entryToDelta;
     private deltaToDisplayDelta;
 }
