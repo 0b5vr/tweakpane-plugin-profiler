@@ -1,4 +1,4 @@
-import { ConsecutiveCacheMap } from './utils/ConsecutiveCacheMap';
+import { ConsecutiveOrderedCacheMap } from './utils/ConsecutiveCacheMap';
 import {
   Controller,
   Ticker,
@@ -6,13 +6,20 @@ import {
 } from '@tweakpane/core';
 import { HistoryMeanCalculator } from './utils/HistoryMeanCalculator';
 import { HistoryPercentileCalculator } from './utils/HistoryPercentileCalculator';
-import { LatestPromiseHandler } from './utils/LatestPromiseHandler';
 import { ProfilerBladeView } from './ProfilerBladeView';
+import { arrayClear } from './utils/arrayClear';
 import { arraySum } from './utils/arraySum';
 import type { ProfilerBladeControllerConfig } from './ProfilerBladeControllerConfig';
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
 import type { ProfilerEntry } from './ProfilerEntry';
-import type { ProfilerMeasureStackEntry } from './ProfilerMeasureStackEntry';
+
+interface CalcCache {
+  meanCalc: HistoryMeanCalculator;
+  medianCalc: HistoryPercentileCalculator;
+  latest: number;
+  childrenCacheMap: ConsecutiveOrderedCacheMap<string, CalcCache>;
+  childrenPromiseDelta: Promise<number>[];
+}
 
 // Custom controller class should implement `Controller` interface
 export class ProfilerBladeController implements Controller<ProfilerBladeView> {
@@ -23,13 +30,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
   public readonly viewProps: ViewProps;
   private ticker_: Ticker;
 
-  private measureStack_: ProfilerMeasureStackEntry[];
-  private latestEntry_: ProfilerEntry;
-  private latestPromiseHandler_: LatestPromiseHandler<ProfilerEntry>;
-  private readonly entryCalcCacheMap_: ConsecutiveCacheMap<string, {
-    meanCalc: HistoryMeanCalculator,
-    medianCalc: HistoryPercentileCalculator,
-  }>;
+  private rootCalcCacheStack_: CalcCache[];
 
   public constructor( doc: Document, config: ProfilerBladeControllerConfig ) {
     this.targetDelta = config.targetDelta;
@@ -56,86 +57,79 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
 
     this.measureHandler = config.measureHandler;
 
-    this.measureStack_ = [];
-    this.latestEntry_ = {
-      name: 'root',
-      path: '/root',
-      delta: 0.0,
-      deltaMean: 0.0,
-      deltaMedian: 0.0,
-      selfDelta: 0.0,
-      selfDeltaMean: 0.0,
-      selfDeltaMedian: 0.0,
-      children: [],
-    };
-    this.latestPromiseHandler_ = new LatestPromiseHandler( ( entry ) => {
-      this.latestEntry_ = entry;
-    } );
-
-    this.entryCalcCacheMap_ = new ConsecutiveCacheMap();
+    this.rootCalcCacheStack_ = [ this.createNewEntryCalcCache_() ];
   }
 
-  public measure( name: string, fn: () => void ): void {
-    const parent = this.measureStack_[ this.measureStack_.length - 1 ];
-    const path = `${ parent?.path ?? '' }/${ name }`;
+  public async measure( name: string, fn: () => void ): Promise<void> {
+    const parent = this.rootCalcCacheStack_[ this.rootCalcCacheStack_.length - 1 ];
+    const calcCache = parent.childrenCacheMap.getOrCreate(
+      name,
+      () => this.createNewEntryCalcCache_(),
+    );
+    arrayClear( calcCache.childrenPromiseDelta );
+    this.rootCalcCacheStack_.push( calcCache );
 
-    if ( parent == null ) {
-      this.entryCalcCacheMap_.resetUsedSet();
+    const promiseDelta = Promise.resolve( this.measureHandler.measure( fn ) );
+    parent.childrenPromiseDelta.push( promiseDelta );
+
+    this.rootCalcCacheStack_.pop();
+    calcCache.childrenCacheMap.vaporize();
+
+    const children = await Promise.all( calcCache.childrenPromiseDelta );
+    const sumChildrenDelta = arraySum( children );
+    const selfDelta = ( await promiseDelta ) - sumChildrenDelta;
+
+    calcCache.meanCalc.push( selfDelta );
+    calcCache.medianCalc.push( selfDelta );
+    calcCache.latest = selfDelta;
+  }
+
+  public renderEntry(): ProfilerEntry {
+    return this.renderEntryFromCalcCache_( '', this.rootCalcCacheStack_[ 0 ] );
+  }
+
+  private renderEntryFromCalcCache_( name: string, calcCache: CalcCache ): ProfilerEntry {
+    const children: ProfilerEntry[] = [];
+    for ( const childName of calcCache.childrenCacheMap.keyArray ) {
+      const child = calcCache.childrenCacheMap.get( childName )!;
+      children.push( this.renderEntryFromCalcCache_( childName, child ) );
     }
 
-    const { meanCalc, medianCalc } = this.entryCalcCacheMap_.getOrCreate( path, () => {
-      return {
-        meanCalc: new HistoryMeanCalculator( this.bufferSize ),
-        medianCalc: new HistoryPercentileCalculator( this.bufferSize ),
-      };
-    } );
+    const selfDelta = calcCache.latest;
+    const selfDeltaMean = calcCache.meanCalc.mean;
+    const selfDeltaMedian = calcCache.medianCalc.median;
 
-    const measureStackEntry: ProfilerMeasureStackEntry = {
-      path,
-      promiseChildren: [],
+    const childrenDeltaSum = arraySum( children.map( ( child ) => child.delta ) );
+    const childrenDeltaMeanSum = arraySum( children.map( ( child ) => child.deltaMean ) );
+    const childrenDeltaMedianSum = arraySum( children.map( ( child ) => child.deltaMedian ) );
+
+    const delta = selfDelta + childrenDeltaSum;
+    const deltaMean = selfDeltaMean + childrenDeltaMeanSum;
+    const deltaMedian = selfDeltaMedian + childrenDeltaMedianSum;
+
+    return {
+      name,
+      delta,
+      deltaMean,
+      deltaMedian,
+      selfDelta,
+      selfDeltaMean,
+      selfDeltaMedian,
+      children,
     };
-    this.measureStack_.push( measureStackEntry );
-
-    const promiseEntry = ( async (): Promise<ProfilerEntry> => {
-      const delta = await Promise.resolve( this.measureHandler.measure( path, fn ) );
-
-      const children = await Promise.all( measureStackEntry.promiseChildren );
-      const sumChildrenDelta = arraySum( children.map( ( child ) => child.delta ) );
-      const selfDelta = delta - sumChildrenDelta;
-
-      meanCalc.push( selfDelta );
-      medianCalc.push( selfDelta );
-      const selfDeltaMean = meanCalc.mean;
-      const selfDeltaMedian = medianCalc.median;
-
-      const sumChildDeltaMean = arraySum( children.map( ( child ) => child.deltaMean ) );
-      const sumChildDeltaMedian = arraySum( children.map( ( child ) => child.deltaMedian ) );
-      const deltaMean = selfDeltaMean + sumChildDeltaMean;
-      const deltaMedian = selfDeltaMedian + sumChildDeltaMedian;
-
-      return {
-        name,
-        path,
-        delta,
-        deltaMean,
-        deltaMedian,
-        selfDelta,
-        selfDeltaMean,
-        selfDeltaMedian,
-        children,
-      };
-    } )();
-    parent?.promiseChildren.push( promiseEntry );
-
-    this.measureStack_.pop();
-
-    if ( parent == null ) {
-      this.latestPromiseHandler_.add( promiseEntry );
-      this.entryCalcCacheMap_.vaporize();
-    }
   }
 
   private onTick_(): void {
-    this.view.update( this.latestEntry_ );
+    this.view.update( this.renderEntry() );
+  }
+
+  private createNewEntryCalcCache_(): CalcCache {
+    return {
+      meanCalc: new HistoryMeanCalculator( this.bufferSize ),
+      medianCalc: new HistoryPercentileCalculator( this.bufferSize ),
+      latest: 0.0,
+      childrenCacheMap: new ConsecutiveOrderedCacheMap(),
+      childrenPromiseDelta: [],
+    };
   }
 }
