@@ -4,8 +4,8 @@ import type { ProfilerBladeController } from './ProfilerBladeController';
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
 
 export class ProfilerBladeApi extends BladeApi<LabelController<ProfilerBladeController>> {
-  public measure( path: string, fn: () => void ): void {
-    this.controller_.valueController.measure( path, fn );
+  public measure( name: string, fn: () => void ): void {
+    this.controller_.valueController.measure( name, fn );
   }
 
   public get measureHandler(): ProfilerBladeMeasureHandler {
