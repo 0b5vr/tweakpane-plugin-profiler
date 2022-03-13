@@ -1,12 +1,10 @@
-import { arrayClear } from './arrayClear';
-
-export class ConsecutiveOrderedCacheMap<TKey, TValue> {
+export class ConsecutiveCacheMap<TKey, TValue> {
   public readonly map: Map<TKey, TValue>;
-  public readonly keyArray: TKey[];
+  public readonly keySet: Set<TKey>;
 
   public constructor() {
     this.map = new Map();
-    this.keyArray = [];
+    this.keySet = new Set();
   }
 
   public get( key: TKey ): TValue | undefined {
@@ -14,7 +12,10 @@ export class ConsecutiveOrderedCacheMap<TKey, TValue> {
   }
 
   public getOrCreate( key: TKey, create: () => TValue ): TValue {
-    this.__markAsUsed( key );
+    if ( !this.keySet.has( key ) ) {
+      this.keySet.add( key );
+    }
+
     let value = this.map.get( key );
     if ( value == null ) {
       value = create();
@@ -24,26 +25,23 @@ export class ConsecutiveOrderedCacheMap<TKey, TValue> {
   }
 
   public set( key: TKey, value: TValue ): void {
-    this.__markAsUsed( key );
+    if ( !this.keySet.has( key ) ) {
+      this.keySet.add( key );
+    }
+
     this.map.set( key, value );
   }
 
   public resetUsedSet(): void {
-    arrayClear( this.keyArray );
+    this.keySet.clear();
   }
 
   public vaporize( onVaporize?: ( entry: [ key: TKey, value: TValue ] ) => void ): void {
-    Array.from( this.map.entries() ).forEach( ( [ key, value ] ) => {
-      if ( this.keyArray.indexOf( key ) === -1 ) {
+    for ( const [ key, value ] of this.map.entries() ) {
+      if ( !this.keySet.has( key ) ) {
         this.map.delete( key );
         onVaporize?.( [ key, value ] );
       }
-    } );
-  }
-
-  private __markAsUsed( key: TKey ): void {
-    if ( this.keyArray.indexOf( key ) === -1 ) {
-      this.keyArray.push( key );
     }
   }
 }

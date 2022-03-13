@@ -1,5 +1,5 @@
 import { ClassName } from '@tweakpane/core';
-import { ConsecutiveOrderedCacheMap } from './utils/ConsecutiveCacheMap';
+import { ConsecutiveCacheMap } from './utils/ConsecutiveCacheMap';
 import { genTurboColormap } from './utils/genTurboColormap';
 import { saturate } from './utils/saturate';
 import type { ProfilerBladeViewConfig } from './ProfilerBladeViewConfig';
@@ -22,7 +22,7 @@ export class ProfilerBladeView implements View {
   private readonly tooltipElement_: HTMLDivElement;
   private readonly tooltipInsideElement_: HTMLDivElement;
   private readonly labelElement_: HTMLDivElement;
-  private readonly entryElementCacheMap_: ConsecutiveOrderedCacheMap<string, SVGGElement>;
+  private readonly entryElementCacheMap_: ConsecutiveCacheMap<string, SVGGElement>;
   private hoveringEntry_: string | null;
 
   public constructor( doc: Document, config: ProfilerBladeViewConfig ) {
@@ -58,7 +58,7 @@ export class ProfilerBladeView implements View {
     this.labelElement_.textContent = this.deltaToDisplayDelta_( 0.0 );
     this.element.appendChild( this.labelElement_ );
 
-    this.entryElementCacheMap_ = new ConsecutiveOrderedCacheMap();
+    this.entryElementCacheMap_ = new ConsecutiveCacheMap();
 
     this.hoveringEntry_ = null;
   }

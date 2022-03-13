@@ -1,4 +1,4 @@
-import { ConsecutiveOrderedCacheMap } from './utils/ConsecutiveCacheMap';
+import { ConsecutiveCacheMap } from './utils/ConsecutiveCacheMap';
 import {
   Controller,
   Ticker,
@@ -17,7 +17,7 @@ interface CalcCache {
   meanCalc: HistoryMeanCalculator;
   medianCalc: HistoryPercentileCalculator;
   latest: number;
-  childrenCacheMap: ConsecutiveOrderedCacheMap<string, CalcCache>;
+  childrenCacheMap: ConsecutiveCacheMap<string, CalcCache>;
   childrenPromiseDelta: Promise<number>[];
 }
 
@@ -66,6 +66,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       name,
       () => this.createNewEntryCalcCache_(),
     );
+    calcCache.childrenCacheMap.resetUsedSet();
     arrayClear( calcCache.childrenPromiseDelta );
     this.rootCalcCacheStack_.push( calcCache );
 
@@ -90,7 +91,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
 
   private renderEntryFromCalcCache_( name: string, calcCache: CalcCache ): ProfilerEntry {
     const children: ProfilerEntry[] = [];
-    for ( const childName of calcCache.childrenCacheMap.keyArray ) {
+    for ( const childName of calcCache.childrenCacheMap.keySet ) {
       const child = calcCache.childrenCacheMap.get( childName )!;
       children.push( this.renderEntryFromCalcCache_( childName, child ) );
     }
@@ -128,7 +129,7 @@ export class ProfilerBladeController implements Controller<ProfilerBladeView> {
       meanCalc: new HistoryMeanCalculator( this.bufferSize ),
       medianCalc: new HistoryPercentileCalculator( this.bufferSize ),
       latest: 0.0,
-      childrenCacheMap: new ConsecutiveOrderedCacheMap(),
+      childrenCacheMap: new ConsecutiveCacheMap(),
       childrenPromiseDelta: [],
     };
   }
