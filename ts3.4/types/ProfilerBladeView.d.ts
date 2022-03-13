@@ -18,6 +18,6 @@ export declare class ProfilerBladeView implements View {
     update(rootEntry: ProfilerEntry): void;
     private updateTooltip_;
     private addEntry_;
-    private entryToDelta;
-    private deltaToDisplayDelta;
+    private entryToDelta_;
+    private deltaToDisplayDelta_;
 }

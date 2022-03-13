@@ -5,7 +5,7 @@
 }(this, (function (exports) { 'use strict';
 
     class ProfilerBladeDefaultMeasureHandler {
-        measure(name, fn) {
+        measure(fn) {
             const begin = performance.now();
             fn();
             const delta = performance.now() - begin;
@@ -498,8 +498,8 @@
     };
 
     class ProfilerBladeApi extends BladeApi {
-        measure(path, fn) {
-            this.controller_.valueController.measure(path, fn);
+        measure(name, fn) {
+            this.controller_.valueController.measure(name, fn);
         }
         get measureHandler() {
             return this.controller_.valueController.measureHandler;
@@ -509,48 +509,41 @@
         }
     }
 
-    function __awaiter(thisArg, _arguments, P, generator) {
-        function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-        return new (P || (P = Promise))(function (resolve, reject) {
-            function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-            function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-            function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-            step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-    }
-
     class ConsecutiveCacheMap {
         constructor() {
-            this.__map = new Map();
-            this.__setUsed = new Set();
+            this.map = new Map();
+            this.keySet = new Set();
         }
         get(key) {
-            this.__setUsed.add(key);
-            return this.__map.get(key);
+            return this.map.get(key);
         }
         getOrCreate(key, create) {
-            this.__setUsed.add(key);
-            let value = this.__map.get(key);
+            if (!this.keySet.has(key)) {
+                this.keySet.add(key);
+            }
+            let value = this.map.get(key);
             if (value == null) {
                 value = create();
-                this.__map.set(key, value);
+                this.map.set(key, value);
             }
             return value;
         }
         set(key, value) {
-            this.__setUsed.add(key);
-            this.__map.set(key, value);
+            if (!this.keySet.has(key)) {
+                this.keySet.add(key);
+            }
+            this.map.set(key, value);
         }
         resetUsedSet() {
-            this.__setUsed.clear();
+            this.keySet.clear();
         }
         vaporize(onVaporize) {
-            Array.from(this.__map.entries()).forEach(([key, value]) => {
-                if (!this.__setUsed.has(key)) {
-                    this.__map.delete(key);
+            for (const [key, value] of this.map.entries()) {
+                if (!this.keySet.has(key)) {
+                    this.map.delete(key);
                     onVaporize === null || onVaporize === void 0 ? void 0 : onVaporize([key, value]);
                 }
-            });
+            }
         }
     }
 
@@ -675,24 +668,6 @@
         }
     }
 
-    class LatestPromiseHandler {
-        constructor(handler) {
-            this.handler = handler;
-            this.id_ = 0;
-            this.latestResolved_ = -1;
-        }
-        add(promise) {
-            const id = this.id_;
-            this.id_++;
-            promise.then((value) => {
-                if (id > this.latestResolved_) {
-                    this.handler(value);
-                    this.latestResolved_ = id;
-                }
-            });
-        }
-    }
-
     function dot(a, b) {
         let sum = 0.0;
         for (let i = 0; i < a.length; i++) {
@@ -765,17 +740,22 @@
             this.tooltipElement_.appendChild(this.tooltipInsideElement_);
             this.labelElement_ = doc.createElement('div');
             this.labelElement_.classList.add(className('label'));
-            this.labelElement_.textContent = this.deltaToDisplayDelta(0.0);
+            this.labelElement_.textContent = this.deltaToDisplayDelta_(0.0);
             this.element.appendChild(this.labelElement_);
             this.entryElementCacheMap_ = new ConsecutiveCacheMap();
             this.hoveringEntry_ = null;
         }
         update(rootEntry) {
-            const rootEntryDelta = this.entryToDelta(rootEntry);
-            this.labelElement_.textContent = this.deltaToDisplayDelta(rootEntryDelta);
+            const rootEntryDelta = this.entryToDelta_(rootEntry);
+            this.labelElement_.textContent = this.deltaToDisplayDelta_(rootEntryDelta);
             this.entryElementCacheMap_.resetUsedSet();
             const unit = 160.0 / Math.max(this.targetDelta, rootEntryDelta);
-            this.addEntry_(rootEntry, this.entryContainerElement_, unit);
+            let x = 0.0;
+            for (const child of rootEntry.children) {
+                const childElement = this.addEntry_(child, '', this.entryContainerElement_, unit);
+                childElement.setAttribute('transform', `translate( ${x}, ${0.0} )`);
+                x += this.entryToDelta_(child) * unit;
+            }
             this.entryElementCacheMap_.vaporize(([path, element]) => {
                 element.remove();
                 if (this.hoveringEntry_ === path) {
@@ -789,7 +769,7 @@
             if (path) {
                 const element = this.entryElementCacheMap_.get(path);
                 const dataDelta = element === null || element === void 0 ? void 0 : element.getAttribute('data-delta');
-                const displayDelta = this.deltaToDisplayDelta(parseFloat(dataDelta !== null && dataDelta !== void 0 ? dataDelta : '0.0'));
+                const displayDelta = this.deltaToDisplayDelta_(parseFloat(dataDelta !== null && dataDelta !== void 0 ? dataDelta : '0.0'));
                 const text = `${path}\n${displayDelta}`;
                 this.tooltipElement_.style.display = 'block';
                 this.tooltipInsideElement_.textContent = text;
@@ -798,8 +778,8 @@
                 this.tooltipElement_.style.display = 'none';
             }
         }
-        addEntry_(entry, parent, unit) {
-            const path = entry.path;
+        addEntry_(entry, parentPath, parent, unit) {
+            const path = `${parentPath}/${entry.name}`;
             const g = this.entryElementCacheMap_.getOrCreate(path, () => {
                 const newG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 newG.classList.add(className('entry'));
@@ -818,7 +798,7 @@
                 });
                 return newG;
             });
-            const delta = this.entryToDelta(entry);
+            const delta = this.entryToDelta_(entry);
             g.setAttribute('data-delta', `${delta}`);
             const rect = g.childNodes[0];
             rect.setAttribute('width', `${Math.max(0.01, delta * unit - 1.0)}px`);
@@ -828,14 +808,14 @@
             if (entry.children.length > 0) {
                 let x = 0.0;
                 entry.children.forEach((child) => {
-                    const childElement = this.addEntry_(child, g, unit);
+                    const childElement = this.addEntry_(child, path, g, unit);
                     childElement.setAttribute('transform', `translate( ${x}, ${10.0} )`);
-                    x += this.entryToDelta(child) * unit;
+                    x += this.entryToDelta_(child) * unit;
                 });
             }
             return g;
         }
-        entryToDelta(entry) {
+        entryToDelta_(entry) {
             if (this.calcMode === 'frame') {
                 return entry.delta;
             }
@@ -849,9 +829,13 @@
                 throw new Error('Unreachable! calcMode must be one of "frame", "mean", or "median"');
             }
         }
-        deltaToDisplayDelta(delta) {
+        deltaToDisplayDelta_(delta) {
             return `${delta.toFixed(this.fractionDigits)} ${this.deltaUnit}`;
         }
+    }
+
+    function arrayClear(array) {
+        array.splice(0, array.length);
     }
 
     /**
@@ -883,75 +867,65 @@
                 this.ticker_.dispose();
             });
             this.measureHandler = config.measureHandler;
-            this.measureStack_ = [];
-            this.latestEntry_ = {
-                name: 'root',
-                path: '/root',
-                delta: 0.0,
-                deltaMean: 0.0,
-                deltaMedian: 0.0,
-                selfDelta: 0.0,
-                selfDeltaMean: 0.0,
-                selfDeltaMedian: 0.0,
-                children: [],
-            };
-            this.latestPromiseHandler_ = new LatestPromiseHandler((entry) => {
-                this.latestEntry_ = entry;
-            });
-            this.entryCalcCacheMap_ = new ConsecutiveCacheMap();
+            this.rootCalcCacheStack_ = [this.createNewEntryCalcCache_()];
         }
-        measure(name, fn) {
-            var _a;
-            const parent = this.measureStack_[this.measureStack_.length - 1];
-            const path = `${(_a = parent === null || parent === void 0 ? void 0 : parent.path) !== null && _a !== void 0 ? _a : ''}/${name}`;
-            if (parent == null) {
-                this.entryCalcCacheMap_.resetUsedSet();
+        async measure(name, fn) {
+            const parent = this.rootCalcCacheStack_[this.rootCalcCacheStack_.length - 1];
+            const calcCache = parent.childrenCacheMap.getOrCreate(name, () => this.createNewEntryCalcCache_());
+            calcCache.childrenCacheMap.resetUsedSet();
+            arrayClear(calcCache.childrenPromiseDelta);
+            this.rootCalcCacheStack_.push(calcCache);
+            const promiseDelta = Promise.resolve(this.measureHandler.measure(fn));
+            parent.childrenPromiseDelta.push(promiseDelta);
+            this.rootCalcCacheStack_.pop();
+            calcCache.childrenCacheMap.vaporize();
+            const children = await Promise.all(calcCache.childrenPromiseDelta);
+            const sumChildrenDelta = arraySum(children);
+            const selfDelta = (await promiseDelta) - sumChildrenDelta;
+            calcCache.meanCalc.push(selfDelta);
+            calcCache.medianCalc.push(selfDelta);
+            calcCache.latest = selfDelta;
+        }
+        renderEntry() {
+            return this.renderEntryFromCalcCache_('', this.rootCalcCacheStack_[0]);
+        }
+        renderEntryFromCalcCache_(name, calcCache) {
+            const children = [];
+            for (const childName of calcCache.childrenCacheMap.keySet) {
+                const child = calcCache.childrenCacheMap.get(childName);
+                children.push(this.renderEntryFromCalcCache_(childName, child));
             }
-            const { meanCalc, medianCalc } = this.entryCalcCacheMap_.getOrCreate(path, () => {
-                return {
-                    meanCalc: new HistoryMeanCalculator(this.bufferSize),
-                    medianCalc: new HistoryPercentileCalculator(this.bufferSize),
-                };
-            });
-            const measureStackEntry = {
-                path,
-                promiseChildren: [],
+            const selfDelta = calcCache.latest;
+            const selfDeltaMean = calcCache.meanCalc.mean;
+            const selfDeltaMedian = calcCache.medianCalc.median;
+            const childrenDeltaSum = arraySum(children.map((child) => child.delta));
+            const childrenDeltaMeanSum = arraySum(children.map((child) => child.deltaMean));
+            const childrenDeltaMedianSum = arraySum(children.map((child) => child.deltaMedian));
+            const delta = selfDelta + childrenDeltaSum;
+            const deltaMean = selfDeltaMean + childrenDeltaMeanSum;
+            const deltaMedian = selfDeltaMedian + childrenDeltaMedianSum;
+            return {
+                name,
+                delta,
+                deltaMean,
+                deltaMedian,
+                selfDelta,
+                selfDeltaMean,
+                selfDeltaMedian,
+                children,
             };
-            this.measureStack_.push(measureStackEntry);
-            const promiseEntry = (() => __awaiter(this, void 0, void 0, function* () {
-                const delta = yield Promise.resolve(this.measureHandler.measure(path, fn));
-                const children = yield Promise.all(measureStackEntry.promiseChildren);
-                const sumChildrenDelta = arraySum(children.map((child) => child.delta));
-                const selfDelta = delta - sumChildrenDelta;
-                meanCalc.push(selfDelta);
-                medianCalc.push(selfDelta);
-                const selfDeltaMean = meanCalc.mean;
-                const selfDeltaMedian = medianCalc.median;
-                const sumChildDeltaMean = arraySum(children.map((child) => child.deltaMean));
-                const sumChildDeltaMedian = arraySum(children.map((child) => child.deltaMedian));
-                const deltaMean = selfDeltaMean + sumChildDeltaMean;
-                const deltaMedian = selfDeltaMedian + sumChildDeltaMedian;
-                return {
-                    name,
-                    path,
-                    delta,
-                    deltaMean,
-                    deltaMedian,
-                    selfDelta,
-                    selfDeltaMean,
-                    selfDeltaMedian,
-                    children,
-                };
-            }))();
-            parent === null || parent === void 0 ? void 0 : parent.promiseChildren.push(promiseEntry);
-            this.measureStack_.pop();
-            if (parent == null) {
-                this.latestPromiseHandler_.add(promiseEntry);
-                this.entryCalcCacheMap_.vaporize();
-            }
         }
         onTick_() {
-            this.view.update(this.latestEntry_);
+            this.view.update(this.renderEntry());
+        }
+        createNewEntryCalcCache_() {
+            return {
+                meanCalc: new HistoryMeanCalculator(this.bufferSize),
+                medianCalc: new HistoryPercentileCalculator(this.bufferSize),
+                latest: 0.0,
+                childrenCacheMap: new ConsecutiveCacheMap(),
+                childrenPromiseDelta: [],
+            };
         }
     }
 

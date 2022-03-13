@@ -1,3 +1,3 @@
 export interface ProfilerBladeMeasureHandler {
-    measure: (path: string, fn: () => void) => number | Promise<number>;
+    measure: (fn: () => void) => number | Promise<number>;
 }

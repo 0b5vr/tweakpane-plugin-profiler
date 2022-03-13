@@ -1,6 +1,6 @@
 export declare class ConsecutiveCacheMap<TKey, TValue> {
-    private readonly __map;
-    private readonly __setUsed;
+    readonly map: Map<TKey, TValue>;
+    readonly keySet: Set<TKey>;
     constructor();
     get(key: TKey): TValue | undefined;
     getOrCreate(key: TKey, create: () => TValue): TValue;

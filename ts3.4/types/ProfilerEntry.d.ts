@@ -1,6 +1,5 @@
 export interface ProfilerEntry {
     name: string;
-    path: string;
     delta: number;
     deltaMean: number;
     deltaMedian: number;
