@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "lib": ["DOM", "ES2015"],
-    "moduleResolution": "Node",
+    "lib": ["dom", "es2017"],
+    "moduleResolution": "node",
     "strict": true,
-    "target": "ES6",
+    "target": "es2017",
     "forceConsistentCasingInFileNames": true
   },
   "include": ["./src"]
