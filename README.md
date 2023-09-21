@@ -9,9 +9,10 @@ Profiler plugin for Tweakpane
 [Sandbox](https://0b5vr.github.io/tweakpane-plugin-profiler)
 
 ```html
-<script src="https://unpkg.com/tweakpane@3.0.5/dist/tweakpane.js"></script>
-<script src="./tweakpane-plugin-profiler.js"></script>
-<script>
+<script type="module">
+  import * as Tweakpane from 'https://unpkg.com/tweakpane@4.0.1/dist/tweakpane.js';
+  import * as TweakpaneProfilerBladePlugin from './tweakpane-plugin-profiler.js';
+
   const pane = new Tweakpane.Pane();
 
   pane.registerPlugin( TweakpaneProfilerBladePlugin );

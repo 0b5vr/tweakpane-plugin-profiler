@@ -1,7 +1,7 @@
-import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
+import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler.js';
 import type { Ticker, ViewProps } from '@tweakpane/core';
 
-export interface ProfilerBladeControllerConfig {
+export interface ProfilerControllerConfig {
   ticker: Ticker;
   targetDelta: number;
   bufferSize: number;

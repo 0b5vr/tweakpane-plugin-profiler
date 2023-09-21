@@ -1,6 +1,6 @@
-import { dot } from './dot';
-import { rgbArrayToCssString } from './rgbArrayToCssString';
-import { saturate } from './saturate';
+import { dot } from './dot.js';
+import { rgbArrayToCssString } from './rgbArrayToCssString.js';
+import { saturate } from './saturate.js';
 
 /**
  * Generate Trubo colormap
