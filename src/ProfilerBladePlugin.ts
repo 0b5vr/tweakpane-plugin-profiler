@@ -1,5 +1,5 @@
 import { MicroParser, ValueMap, createPlugin, parseRecord } from '@tweakpane/core';
-import { ProfilerBladeApi } from './ProfilerApi.js';
+import { ProfilerBladeApi } from './ProfilerBladeApi.js';
 import { ProfilerBladeController } from './ProfilerBladeController.js';
 import { ProfilerBladeDefaultMeasureHandler } from './ProfilerBladeDefaultMeasureHandler.js';
 import { ProfilerController } from './ProfilerController.js';
