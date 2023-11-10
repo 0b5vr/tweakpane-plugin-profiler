@@ -16,6 +16,7 @@ interface CalcCache {
   meanCalc: HistoryMeanCalculator;
   medianCalc: HistoryPercentileCalculator;
   latest: number;
+  measureEnd: ( () => number | Promise<number> ) | null;
   childrenCacheMap: ConsecutiveCacheMap<string, CalcCache>;
   childrenPromiseDelta: Promise<number>[];
 }
@@ -60,9 +61,9 @@ export class ProfilerController implements Controller<ProfilerView> {
     this.rootCalcCacheStack_ = [ this.createNewEntryCalcCache_() ];
   }
 
-  public async measure( name: string, fn: () => void ): Promise<void> {
-    const parent = this.rootCalcCacheStack_[ this.rootCalcCacheStack_.length - 1 ];
-    const calcCache = parent.childrenCacheMap.getOrCreate(
+  public measureStart( name: string ): void {
+    const parentCalcCache = this.rootCalcCacheStack_[ this.rootCalcCacheStack_.length - 1 ];
+    const calcCache = parentCalcCache.childrenCacheMap.getOrCreate(
       name,
       () => this.createNewEntryCalcCache_(),
     );
@@ -70,8 +71,16 @@ export class ProfilerController implements Controller<ProfilerView> {
     arrayClear( calcCache.childrenPromiseDelta );
     this.rootCalcCacheStack_.push( calcCache );
 
-    const promiseDelta = Promise.resolve( this.measureHandler.measure( fn ) );
-    parent.childrenPromiseDelta.push( promiseDelta );
+    calcCache.measureEnd = this.measureHandler.measureStart();
+  }
+
+  public async measureEnd(): Promise<void> {
+    const calcCache = this.rootCalcCacheStack_[ this.rootCalcCacheStack_.length - 1 ];
+    const parentCalcCache = this.rootCalcCacheStack_[ this.rootCalcCacheStack_.length - 2 ];
+
+    const promiseDelta = Promise.resolve( calcCache.measureEnd!() );
+    calcCache.measureEnd = null;
+    parentCalcCache.childrenPromiseDelta.push( promiseDelta );
 
     this.rootCalcCacheStack_.pop();
     calcCache.childrenCacheMap.vaporize();
@@ -83,6 +92,12 @@ export class ProfilerController implements Controller<ProfilerView> {
     calcCache.meanCalc.push( selfDelta );
     calcCache.medianCalc.push( selfDelta );
     calcCache.latest = selfDelta;
+  }
+
+  public async measure( name: string, fn: () => void | Promise<void> ): Promise<void> {
+    this.measureStart( name );
+    await fn();
+    this.measureEnd();
   }
 
   public renderEntry(): ProfilerEntry {
@@ -129,6 +144,7 @@ export class ProfilerController implements Controller<ProfilerView> {
       meanCalc: new HistoryMeanCalculator( this.bufferSize ),
       medianCalc: new HistoryPercentileCalculator( this.bufferSize ),
       latest: 0.0,
+      measureEnd: null,
       childrenCacheMap: new ConsecutiveCacheMap(),
       childrenPromiseDelta: [],
     };
