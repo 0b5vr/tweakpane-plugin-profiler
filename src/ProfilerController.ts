@@ -94,9 +94,9 @@ export class ProfilerController implements Controller<ProfilerView> {
     calcCache.latest = selfDelta;
   }
 
-  public async measure( name: string, fn: () => void ): Promise<void> {
+  public async measure( name: string, fn: () => void | Promise<void> ): Promise<void> {
     this.measureStart( name );
-    fn();
+    await fn();
     this.measureEnd();
   }
 
