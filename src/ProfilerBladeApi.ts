@@ -1,17 +1,16 @@
 import { BladeApi } from '@tweakpane/core';
-import type { LabelController } from '@tweakpane/core';
-import type { ProfilerBladeController } from './ProfilerBladeController';
-import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
+import type { ProfilerBladeController } from './ProfilerBladeController.js';
+import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler.js';
 
-export class ProfilerBladeApi extends BladeApi<LabelController<ProfilerBladeController>> {
+export class ProfilerBladeApi extends BladeApi<ProfilerBladeController> {
   public measure( name: string, fn: () => void ): void {
-    this.controller_.valueController.measure( name, fn );
+    this.controller.valueController.measure( name, fn );
   }
 
   public get measureHandler(): ProfilerBladeMeasureHandler {
-    return this.controller_.valueController.measureHandler;
+    return this.controller.valueController.measureHandler;
   }
   public set measureHandler( measureHandler: ProfilerBladeMeasureHandler ) {
-    this.controller_.valueController.measureHandler = measureHandler;
+    this.controller.valueController.measureHandler = measureHandler;
   }
 }

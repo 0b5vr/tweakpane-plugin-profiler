@@ -1,4 +1,4 @@
-import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
+import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler.js';
 
 export class ProfilerBladeDefaultMeasureHandler implements ProfilerBladeMeasureHandler {
   public measure( fn: () => void ): number {

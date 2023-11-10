@@ -1,14 +1,12 @@
-import { LabelController, ParamsParser, ParamsParsers, ValueMap, parseParams } from '@tweakpane/core';
-import { ProfilerBladeApi } from './ProfilerBladeApi';
-import { ProfilerBladeController } from './ProfilerBladeController';
-import { ProfilerBladeDefaultMeasureHandler } from './ProfilerBladeDefaultMeasureHandler';
-import { createTicker } from './utils/createTicker';
-import type {
-  BladePlugin,
-  LabelPropsObject,
-} from '@tweakpane/core';
-import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
-import type { ProfilerBladePluginParams } from './ProfilerBladePluginParams';
+import { MicroParser, ValueMap, createPlugin, parseRecord } from '@tweakpane/core';
+import { ProfilerBladeApi } from './ProfilerBladeApi.js';
+import { ProfilerBladeController } from './ProfilerBladeController.js';
+import { ProfilerBladeDefaultMeasureHandler } from './ProfilerBladeDefaultMeasureHandler.js';
+import { ProfilerController } from './ProfilerController.js';
+import { createTicker } from './utils/createTicker.js';
+import type { BladePlugin, LabelPropsObject } from '@tweakpane/core';
+import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler.js';
+import type { ProfilerBladePluginParams } from './ProfilerBladePluginParams.js';
 
 function parseCalcMode( value: unknown ): 'frame' | 'mean' | 'median' | undefined {
   switch ( value ) {
@@ -21,17 +19,13 @@ function parseCalcMode( value: unknown ): 'frame' | 'mean' | 'median' | undefine
   }
 }
 
-export const ProfilerBladePlugin: BladePlugin<
-ProfilerBladePluginParams
-> = {
+export const ProfilerBladePlugin: BladePlugin<ProfilerBladePluginParams> = createPlugin( {
   id: 'profiler',
   type: 'blade',
-  css: '__css__',
 
   accept( params: Record<string, unknown> ) {
     // Parse parameters object
-    const p = ParamsParsers;
-    const result = parseParams<ProfilerBladePluginParams>( params, {
+    const result = parseRecord<ProfilerBladePluginParams>( params, ( p ) => ( {
       view: p.required.constant( 'profiler' ),
       targetDelta: p.optional.number,
       bufferSize: p.optional.number,
@@ -40,8 +34,8 @@ ProfilerBladePluginParams
       calcMode: p.optional.custom( parseCalcMode ),
       label: p.optional.string,
       interval: p.optional.number,
-      measureHandler: p.optional.raw as ParamsParser<ProfilerBladeMeasureHandler>,
-    } );
+      measureHandler: p.optional.raw as MicroParser<ProfilerBladeMeasureHandler>,
+    } ) );
 
     return result ? { params: result } : null;
   },
@@ -55,12 +49,12 @@ ProfilerBladePluginParams
     const calcMode = args.params.calcMode ?? 'mean';
     const measureHandler = args.params.measureHandler ?? new ProfilerBladeDefaultMeasureHandler();
 
-    return new LabelController( args.document, {
+    return new ProfilerBladeController( args.document, {
       blade: args.blade,
-      props: ValueMap.fromObject<LabelPropsObject>( {
-        label: args.params.label,
+      labelProps: ValueMap.fromObject<LabelPropsObject>( {
+        label: args.params.label
       } ),
-      valueController: new ProfilerBladeController( args.document, {
+      valueController: new ProfilerController( args.document, {
         ticker: createTicker( args.document, interval ),
         targetDelta,
         bufferSize,
@@ -69,17 +63,15 @@ ProfilerBladePluginParams
         calcMode,
         viewProps: args.viewProps,
         measureHandler,
-      } ),
+      } )
     } );
   },
 
   api( args ) {
-    if ( !( args.controller instanceof LabelController ) ) {
+    if ( !( args.controller instanceof ProfilerBladeController ) ) {
       return null;
     }
-    if ( !( args.controller.valueController instanceof ProfilerBladeController ) ) {
-      return null;
-    }
+
     return new ProfilerBladeApi( args.controller );
   }
-};
+} );

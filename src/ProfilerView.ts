@@ -1,9 +1,9 @@
 import { ClassName } from '@tweakpane/core';
-import { ConsecutiveCacheMap } from './utils/ConsecutiveCacheMap';
-import { genTurboColormap } from './utils/genTurboColormap';
-import { saturate } from './utils/saturate';
-import type { ProfilerBladeViewConfig } from './ProfilerBladeViewConfig';
-import type { ProfilerEntry } from './ProfilerEntry';
+import { ConsecutiveCacheMap } from './utils/ConsecutiveCacheMap.js';
+import { genTurboColormap } from './utils/genTurboColormap.js';
+import { saturate } from './utils/saturate.js';
+import type { ProfilerEntry } from './ProfilerEntry.js';
+import type { ProfilerViewConfig } from './ProfilerViewConfig.js';
 import type { View } from '@tweakpane/core';
 
 // Create a class name generator from the view name
@@ -11,7 +11,7 @@ import type { View } from '@tweakpane/core';
 const className = ClassName( 'profiler' );
 
 // Custom view class should implement `View` interface
-export class ProfilerBladeView implements View {
+export class ProfilerView implements View {
   public targetDelta: number;
   public deltaUnit: string;
   public fractionDigits: number;
@@ -25,7 +25,7 @@ export class ProfilerBladeView implements View {
   private readonly entryElementCacheMap_: ConsecutiveCacheMap<string, SVGGElement>;
   private hoveringEntry_: string | null;
 
-  public constructor( doc: Document, config: ProfilerBladeViewConfig ) {
+  public constructor( doc: Document, config: ProfilerViewConfig ) {
     this.targetDelta = config.targetDelta;
     this.deltaUnit = config.deltaUnit;
     this.fractionDigits = config.fractionDigits;

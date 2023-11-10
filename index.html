@@ -85,9 +85,10 @@ playground.onUnload = () => {
     <script src="https://www.unpkg.com/codemirror@5.62.3/addon/comment/comment.js"></script>
     <script src="https://www.unpkg.com/codemirror@5.62.3/keymap/sublime.js"></script>
     <script src="https://www.unpkg.com/codemirror@5.62.3/mode/javascript/javascript.js"></script>
-    <script src="https://unpkg.com/tweakpane@3.0.5/dist/tweakpane.js"></script>
-    <script src="./dist/tweakpane-plugin-profiler.js"></script>
-    <script>
+    <script type="module">
+      import * as Tweakpane from 'https://unpkg.com/tweakpane@4.0.1/dist/tweakpane.js';
+      import * as TweakpaneProfilerBladePlugin from './dist/tweakpane-plugin-profiler.js';
+
       const textareaEditor = document.getElementById( 'textareaEditor' );
       const editor = CodeMirror.fromTextArea( textareaEditor, {
         mode: 'javascript',

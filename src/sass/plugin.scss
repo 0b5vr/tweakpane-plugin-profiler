@@ -1,18 +1,18 @@
 // Import core styles
-@import '../../node_modules/@tweakpane/core/lib/sass/plugin';
+@use '../../node_modules/@tweakpane/core/lib/sass/tp';
 
-.#{$prefix}-profilerv {
+.#{tp.$prefix}-profilerv {
   position: relative;
 
   &_root {
-    background-color: var(--mo-bg);
+    background-color: tp.cssVar('monitor-bg');
     width: 100%;
-    height: calc( 2.0 * var(--bld-us) );
+    height: calc(2 * tp.cssVar('container-unit-size'));
   }
 
   &_entryrect {
-    rx: var(--elm-br);
-    ry: var(--elm-br);
+    rx: tp.cssVar('blade-border-radius');
+    ry: tp.cssVar('blade-border-radius');
     stroke: transparent;
     stroke-width: 1px;
     filter: saturate( 0.5 );
@@ -27,7 +27,7 @@
     right: 100%;
     top: 0;
     overflow: hidden;
-    background: var(--bs-bg);
+    background: tp.cssVar('base-bg');
   }
 
   &_tooltipinside {
@@ -35,12 +35,12 @@
     overflow: visible;
     white-space: pre;
     text-align: right;
-    background: var(--mo-bg);
-    color: var(--in-fg);
+    background: tp.cssVar('monitor-bg');
+    color: tp.cssVar('input-fg');
   }
 
   &_label {
-    color: var(--mo-fg);
+    color: tp.cssVar('monitor-fg');
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

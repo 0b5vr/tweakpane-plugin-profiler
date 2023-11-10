@@ -1,5 +1,5 @@
 import type { BaseBladeParams } from '@tweakpane/core';
-import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler';
+import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler.js';
 
 export interface ProfilerBladePluginParams extends BaseBladeParams {
   view: 'profiler';
