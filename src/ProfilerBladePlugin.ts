@@ -1,8 +1,8 @@
-import { MicroParser, ValueMap, createPlugin, parseRecord } from '@tweakpane/core';
 import { ProfilerBladeApi } from './ProfilerBladeApi.js';
 import { ProfilerBladeController } from './ProfilerBladeController.js';
 import { ProfilerBladeDefaultMeasureHandler } from './ProfilerBladeDefaultMeasureHandler.js';
 import { ProfilerController } from './ProfilerController.js';
+import { ValueMap, createPlugin, parseRecord } from '@tweakpane/core';
 import { createTicker } from './utils/createTicker.js';
 import type { BladePlugin, LabelPropsObject } from '@tweakpane/core';
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler.js';
@@ -15,6 +15,17 @@ function parseCalcMode( value: unknown ): 'frame' | 'mean' | 'median' | undefine
   case 'median':
     return value;
   default:
+    return undefined;
+  }
+}
+
+function parseMeasureHandler( value: unknown ): ProfilerBladeMeasureHandler | undefined {
+  if ( typeof value === 'object' && value != null && 'measureStart' in value ) {
+    return value as ProfilerBladeDefaultMeasureHandler;
+  } else {
+    if ( typeof value === 'object' && value != null && 'measure' in value ) {
+      console.warn( 'The API of `ProfilerBladeDefaultMeasureHandler` has been changed in v0.4.0! Please define `measureStart` instead of `measure`. Fallback to the default measure handler.' );
+    }
     return undefined;
   }
 }
@@ -34,7 +45,7 @@ export const ProfilerBladePlugin: BladePlugin<ProfilerBladePluginParams> = creat
       calcMode: p.optional.custom( parseCalcMode ),
       label: p.optional.string,
       interval: p.optional.number,
-      measureHandler: p.optional.raw as MicroParser<ProfilerBladeMeasureHandler>,
+      measureHandler: p.optional.custom( parseMeasureHandler ),
     } ) );
 
     return result ? { params: result } : null;

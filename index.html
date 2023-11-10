@@ -24,6 +24,7 @@ pane.registerPlugin( TweakpaneProfilerBladePlugin );
 const profiler = pane.addBlade( {
   view: 'profiler',
   label: 'profiler',
+  targetDelta: 1, // 16ms by default
 } );
 
 console.log( profiler );
@@ -44,7 +45,7 @@ function abuseSin() {
 }
 
 function abuseFind() {
-  for ( let sum = 0; sum < 1E5; sum ++ ) {
+  for ( let sum = 0; sum < 1E4; sum ++ ) {
     /define/.test( 'undefined' );
   }
 }
@@ -55,20 +56,25 @@ let stop = false;
 function update() {
   if ( stop ) { return; }
 
+  // the lambda inside the `profiler.measure` is measured
   profiler.measure( 'update', () => {
+    // the `profiler.measure` can be nested and displayed in a hierarchy
     profiler.measure( 'math', () => {
+      // even more hierarchy
       profiler.measure( 'abuseRandom', () => {
         abuseRandom();
       } );
 
+      // another item on the same level
       profiler.measure( 'abuseSin', () => {
         abuseSin();
       } );
     } );
 
-    profiler.measure( 'abuseFind', () => {
-      abuseFind();
-    } );
+    // you can use a more classic way as well
+    profiler.measureStart( 'abuseFind' );
+    abuseFind();
+    profiler.measureEnd();
   } );
 
   requestAnimationFrame( update );

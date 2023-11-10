@@ -1,13 +1,8 @@
 import type { ProfilerBladeMeasureHandler } from './ProfilerBladeMeasureHandler.js';
 
 export class ProfilerBladeDefaultMeasureHandler implements ProfilerBladeMeasureHandler {
-  public measure( fn: () => void ): number {
+  public measureStart(): () => number {
     const begin = performance.now();
-
-    fn();
-
-    const delta = performance.now() - begin;
-
-    return delta;
+    return () => performance.now() - begin;
   }
 }
