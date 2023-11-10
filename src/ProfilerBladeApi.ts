@@ -11,8 +11,12 @@ export class ProfilerBladeApi extends BladeApi<ProfilerBladeController> {
     return this.controller.valueController.measureEnd();
   }
 
-  public measure( name: string, fn: () => void ): Promise<void> {
-    return this.controller.valueController.measure( name, fn );
+  public measure( name: string, fn: () => void ): void {
+    this.controller.valueController.measure( name, fn );
+  }
+
+  public measureAsync( name: string, fn: () => Promise<void> ): Promise<void> {
+    return this.controller.valueController.measureAsync( name, fn );
   }
 
   public get measureHandler(): ProfilerBladeMeasureHandler {
